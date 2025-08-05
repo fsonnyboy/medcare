@@ -29,7 +29,6 @@ const parseStorageValue = (value: string | null): SessionData | null => {
             return {
                 token: value,
                 userId: payload.userId || payload.id,
-                ownerId: payload.ownerId,
             };
         }
 

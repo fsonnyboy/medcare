@@ -1,0 +1,231 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { ViewLayout } from '@/components/view-layout';
+import ThemedText from '@/components/themed-text';
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
+import { useContextProvider } from '@/context/ctx';
+import { getRecommendedMedicines } from '@/queries/medicine/recommended';
+import { MedicineExtended } from '@/types/common';
+import { RecommendedResponse } from '@/types/medicine-queries';
+
+export default function RecommendedScreen() {
+    const { axiosInstance } = useContextProvider();
+    const [recommendedMedicines, setRecommendedMedicines] = useState<MedicineExtended[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+    const [isLoadingMore, setIsLoadingMore] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const [currentPage, setCurrentPage] = useState(1);
+    const [hasNextPage, setHasNextPage] = useState(true);
+    const [paginationInfo, setPaginationInfo] = useState<any>(null);
+
+    useEffect(() => {
+        fetchRecommendedMedicines(1, false);
+    }, []);
+
+    const fetchRecommendedMedicines = async (page: number = 1, isLoadMore: boolean = false) => {
+        if (!axiosInstance) {
+            setError('No authentication available');
+            setIsLoading(false);
+            return;
+        }
+
+        try {
+            if (isLoadMore) {
+                setIsLoadingMore(true);
+            } else {
+                setIsLoading(true);
+            }
+            setError(null);
+            
+            const response: RecommendedResponse = await getRecommendedMedicines(axiosInstance, { 
+                page, 
+                limit: 10 
+            });
+            
+            if (isLoadMore) {
+                setRecommendedMedicines(prev => [...prev, ...response.medicines]);
+            } else {
+                setRecommendedMedicines(response.medicines);
+            }
+            
+            setPaginationInfo(response.pagination);
+            setHasNextPage(response.pagination.hasNextPage);
+            setCurrentPage(page);
+        } catch (err) {
+            console.error('Error fetching recommended medicines:', err);
+            setError('Failed to load recommended medicines');
+        } finally {
+            setIsLoading(false);
+            setIsLoadingMore(false);
+        }
+    };
+
+    const getMedicineTypeColor = (type: string) => {
+        switch (type.toLowerCase()) {
+            case 'prescription':
+                return { bg: 'bg-gray-100', text: 'text-gray-600' };
+            case 'otc':
+                return { bg: 'bg-green-100', text: 'text-green-600' };
+            default:
+                return { bg: 'bg-blue-100', text: 'text-blue-600' };
+        }
+    };
+
+    const getMedicineIconColor = (type: string) => {
+        switch (type.toLowerCase()) {
+            case 'prescription':
+                return { bg: 'bg-purple-100', text: 'text-purple-600' };
+            case 'otc':
+                return { bg: 'bg-green-100', text: 'text-green-600' };
+            default:
+                return { bg: 'bg-blue-100', text: 'text-blue-600' };
+        }
+    };
+
+    const renderMedicineItem = ({ item }: { item: MedicineExtended }) => {
+        const typeColors = getMedicineTypeColor(item.type);
+        const iconColors = getMedicineIconColor(item.type);
+        
+        return (
+            <TouchableOpacity 
+                className="p-4 mb-3 bg-white rounded-xl shadow-sm"
+                onPress={() => router.push(`/authenticated/medicine-detail?id=${item.id}` as any)}
+            >
+                <View className="flex-row items-center">
+                    {/* Medicine Icon */}
+                    <View className={`w-12 h-12 rounded-lg ${iconColors.bg} items-center justify-center mr-4`}>
+                        <Ionicons name="medical-outline" size={24} color={iconColors.text.replace('text-', '#')} />
+                    </View>
+                    
+                    {/* Medicine Details */}
+                    <View className="flex-1">
+                        <View className="flex-row items-center mb-1">
+                            <ThemedText weight="bold" className="mr-1 text-gray-800">
+                                {item.name}
+                            </ThemedText>
+                            {item.size && (
+                                <ThemedText weight="regular" className="text-gray-600">
+                                    {item.size}
+                                </ThemedText>
+                            )}
+                        </View>
+                        <ThemedText weight="regular" className="mb-2 text-gray-600">
+                            {item.description}
+                        </ThemedText>
+                        {item.brand && (
+                            <ThemedText weight="regular" className="mb-2 text-sm text-gray-500">
+                                {item.brand}
+                            </ThemedText>
+                        )}
+                        <View className="flex-row justify-between items-center">
+                            <View className={`px-3 py-1 rounded-full ${typeColors.bg}`}>
+                                <ThemedText weight="medium" className={`text-xs ${typeColors.text}`}>
+                                    {item.type}
+                                </ThemedText>
+                            </View>
+                            <View className="flex-row items-center">
+                                <ThemedText weight="medium" className="mr-2 text-sm text-gray-500">
+                                    Stock: {item.stock}
+                                </ThemedText>
+                            </View>
+                        </View>
+                    </View>
+                </View>
+            </TouchableOpacity>
+        );
+    };
+
+    const handleLoadMore = useCallback(() => {
+        if (!isLoadingMore && hasNextPage) {
+            fetchRecommendedMedicines(currentPage + 1, true);
+        }
+    }, [isLoadingMore, hasNextPage, currentPage]);
+
+    const renderFooter = () => {
+        // Only show footer when loading more AND we have existing data
+        if (!isLoadingMore || recommendedMedicines.length === 0) return null;
+        
+        return (
+            <View className="items-center py-4">
+                <ActivityIndicator size="small" color="#3B82F6" />
+                <ThemedText weight="regular" className="mt-2 text-gray-500">
+                    Loading more medicines...
+                </ThemedText>
+            </View>
+        );
+    };
+
+    const renderEmpty = () => {
+        if (isLoading) {
+            return (
+                <View className="items-center py-8">
+                    <ActivityIndicator size="large" color="#f8f8ff" />
+                    <ThemedText weight="regular" className="mt-2 text-[#f8f8ff]">
+                        Loading recommended medicines...
+                    </ThemedText>
+                </View>
+            );
+        }
+
+        if (error) {
+            return (
+                <View className="items-center py-8">
+                    <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
+                    <ThemedText weight="medium" className="mt-2 text-red-500">
+                        {error}
+                    </ThemedText>
+                    <TouchableOpacity 
+                        className="px-4 py-2 mt-4 bg-blue-600 rounded-lg"
+                        onPress={() => fetchRecommendedMedicines(1, false)}
+                    >
+                        <ThemedText weight="medium" className="text-white">
+                            Retry
+                        </ThemedText>
+                    </TouchableOpacity>
+                </View>
+            );
+        }
+
+        return (
+            <View className="items-center py-8">
+                <Ionicons name="medical-outline" size={48} color="#9CA3AF" />
+                <ThemedText weight="medium" className="mt-2 text-gray-500">
+                    No recommended medicines available
+                </ThemedText>
+            </View>
+        );
+    };
+
+    return (
+        <ViewLayout scrollEnabled={false}>
+            <View className="flex-1">
+                {/* Header */}
+                <View className="px-6 pt-12 pb-4">
+                    <View className="flex-row justify-between items-center">
+                        <TouchableOpacity onPress={() => router.back()}>
+                            <Ionicons name="arrow-back" size={24} color="white" />
+                        </TouchableOpacity>
+                        <ThemedText weight="bold" className="text-lg text-white">
+                            Recommended Medicines
+                        </ThemedText>
+                        <View className="w-6" />
+                    </View>
+                </View>
+
+                <FlatList
+                    className="flex-1 px-6"
+                    data={recommendedMedicines}
+                    keyExtractor={(item) => item.id.toString()}
+                    renderItem={renderMedicineItem}
+                    ListEmptyComponent={renderEmpty}
+                    ListFooterComponent={renderFooter}
+                    onEndReached={handleLoadMore}
+                    onEndReachedThreshold={0.1}
+                    showsVerticalScrollIndicator={false}
+                    contentContainerStyle={{ paddingBottom: 20 }}
+                />
+            </View>
+        </ViewLayout>
+    );
+} 

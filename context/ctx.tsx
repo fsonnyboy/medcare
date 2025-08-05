@@ -7,6 +7,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getAxiosInstance } from '@/utils/axiosInstance';
 import { userData } from '@/utils/atom';
 import { useStorageState } from '@/utils/useStorageState';
+import { signin } from '@/mutations/auth/signin';
 
 type LoginPayloadStatus = 'error' | 'success';
 
@@ -18,12 +19,11 @@ interface LoginPayload {
 interface SessionData {
     token: string;
     userId: string;
-    ownerId: number;
     expiresAt?: number;
 }
 
 interface Credentials {
-    email: string;
+    username: string;
     password: string;
 }
 
@@ -37,7 +37,6 @@ interface LoginResponse {
     userData: {
         id: string;
         email: string;
-        ownerId: number;
     };
 }
 
@@ -105,27 +104,21 @@ export const ContextProvider: React.FC<React.PropsWithChildren> = (props) => {
         async (credentials: Credentials): Promise<LoginPayload> => {
             setIsAuthenticating(true);
             try {
-                const response = await axios.post<LoginResponse>(
-                    `${BASE_URL}/auth/login`,
-                    credentials,
-                    { timeout: 10000 },
-                );
+                const { accessToken, user } = await signin(credentials);
 
-                const { token, userData } = response.data;
-                if (!token || !userData?.id) {
+                if (!accessToken || !user?.id) {
                     throw new Error('Invalid response format');
                 }
 
                 const sessionData: SessionData = {
-                    token,
-                    userId: userData.id,
-                    ownerId: userData.ownerId,
+                    token: accessToken,
+                    userId: user.id.toString(),
                 };
 
                 await Promise.all([
-                    AsyncStorage.setItem('user', JSON.stringify(userData)),
+                    AsyncStorage.setItem('user', JSON.stringify(user)),
                     setSession(sessionData),
-                    new Promise((resolve) => setUserState(userData)),
+                    new Promise((resolve) => setUserState(user)),
                 ]);
 
                 return { status: 'success' };
