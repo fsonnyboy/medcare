@@ -7,10 +7,13 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useContextProvider } from '@/context/ctx';
 import { getMedicineById, MedicineByIdResponse } from '@/queries/medicine/medicineById';
 import { addToCart } from '@/mutations/cart/addToCart';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { PermissionGate } from '@/components/PermissionGate';
 
 export default function AddToCart() {
     const params = useLocalSearchParams();
     const { axiosInstance, session } = useContextProvider();
+    const { canAddToCart, isApprovedUser, isPendingUser } = useUserPermissions();
     const [medicine, setMedicine] = useState<MedicineByIdResponse['medicine'] | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -64,6 +67,16 @@ export default function AddToCart() {
     };
 
     const handleAddToCart = async () => {
+        // Check if user can add to cart
+        if (!canAddToCart()) {
+            if (isPendingUser()) {
+                Alert.alert('Account Pending', 'Your account is pending approval. You can only view content at this time.');
+            } else {
+                Alert.alert('Permission Denied', 'Your account status does not allow adding items to cart.');
+            }
+            return;
+        }
+        
         if (!validateQuantity()) return;
         if (!session?.userId || !medicine) return;
 
@@ -319,36 +332,66 @@ export default function AddToCart() {
 
                 {/* Bottom Action Buttons */}
                 <View className="px-6 py-4">
-                    <TouchableOpacity
-                        className={`flex-row justify-center items-center py-4 rounded-xl ${
-                            isAddingToCart || medicine.stock === 0 ? 'bg-gray-400' : 'bg-[#10B981]'
-                        }`}
-                        onPress={handleAddToCart}
-                        disabled={isAddingToCart || medicine.stock === 0}
-                    >
-                        {isAddingToCart ? (
-                            <>
-                                <ActivityIndicator size="small" color="white" />
-                                <ThemedText weight="semibold" className="ml-2 text-lg text-white">
-                                    Adding to Cart...
+                    {/* Permission Gate for Add to Cart Button */}
+                    <PermissionGate requireCanAddToCart fallback={
+                        <View className="p-4 mb-3 bg-gray-100 rounded-xl">
+                            <View className="flex-row items-center justify-center">
+                                <Ionicons name="information-circle" size={20} color="#6B7280" />
+                                <ThemedText weight="medium" className="ml-2 text-gray-600 text-center">
+                                    {isPendingUser() 
+                                        ? 'Your account is pending approval. You can only view content at this time.'
+                                        : 'You do not have permission to add items to cart.'
+                                    }
                                 </ThemedText>
-                            </>
-                        ) : medicine.stock === 0 ? (
-                            <>
-                                <Ionicons name="close-circle" size={20} color="white" />
-                                <ThemedText weight="semibold" className="ml-2 text-lg text-white">
-                                    Out of Stock
+                            </View>
+                        </View>
+                    }>
+                        <TouchableOpacity
+                            className={`flex-row justify-center items-center py-4 rounded-xl ${
+                                isAddingToCart || medicine.stock === 0 ? 'bg-gray-400' : 'bg-[#10B981]'
+                            }`}
+                            onPress={handleAddToCart}
+                            disabled={isAddingToCart || medicine.stock === 0}
+                        >
+                            {isAddingToCart ? (
+                                <>
+                                    <ActivityIndicator size="small" color="white" />
+                                    <ThemedText weight="semibold" className="ml-2 text-lg text-white">
+                                        Adding to Cart...
+                                    </ThemedText>
+                                </>
+                            ) : medicine.stock === 0 ? (
+                                <>
+                                    <Ionicons name="close-circle" size={20} color="white" />
+                                    <ThemedText weight="semibold" className="ml-2 text-lg text-white">
+                                        Out of Stock
+                                    </ThemedText>
+                                </>
+                            ) : (
+                                <>
+                                    <Ionicons name="cart" size={20} color="white" />
+                                    <ThemedText weight="semibold" className="ml-2 text-lg text-white">
+                                        Add to Cart ({quantity} {quantity === 1 ? 'unit' : 'units'})
+                                    </ThemedText>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </PermissionGate>
+                    
+                    {/* Permission Status Message */}
+                    {!canAddToCart() && (
+                        <View className="p-3 mt-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <View className="flex-row items-center justify-center">
+                                <Ionicons name="information-circle" size={16} color="#3B82F6" />
+                                <ThemedText weight="medium" className="ml-2 text-blue-700 text-center">
+                                    {isPendingUser() 
+                                        ? 'You can view medicine details but cannot add items to cart until your account is approved.'
+                                        : 'Contact support if you believe this is an error.'
+                                    }
                                 </ThemedText>
-                            </>
-                        ) : (
-                            <>
-                                <Ionicons name="cart" size={20} color="white" />
-                                <ThemedText weight="semibold" className="ml-2 text-lg text-white">
-                                    Add to Cart ({quantity} {quantity === 1 ? 'unit' : 'units'})
-                                </ThemedText>
-                            </>
-                        )}
-                    </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
                 </View>
             </View>
         </ViewLayout>

@@ -68,6 +68,7 @@ export interface MedicineRequestItem {
 
 // Common stock error interface
 export interface StockError {
+  userId: number;
   medicineId: number;
   medicineName: string;
   requestedQuantity: number;

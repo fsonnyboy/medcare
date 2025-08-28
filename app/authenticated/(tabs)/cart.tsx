@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, RefreshControl, FlatList, Alert } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, RefreshControl, FlatList, Alert, TextInput, Modal } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -7,10 +7,15 @@ import { router } from 'expo-router';
 import { useContextProvider } from '@/context/ctx';
 import { getCartItems } from '@/queries/cart/getCartItems';
 import { deleteCartItem } from '@/mutations/cart/deleteCartItem';
+import { createBulkMedicineRequests } from '@/mutations/medicine/request';
 import { CartItemWithAvailability, CartSummary, GetCartItemsResponse } from '@/types/cart';
+import { CreateMedicineRequestData } from '@/types/medicine-requests';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { PermissionGate } from '@/components/PermissionGate';
 
 export default function CartScreen() {
   const { axiosInstance, session } = useContextProvider();
+  const { canRequestMedicine, isPendingUser } = useUserPermissions();
   const [cartItems, setCartItems] = useState<CartItemWithAvailability[]>([]);
   const [cartSummary, setCartSummary] = useState<CartSummary | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -20,6 +25,10 @@ export default function CartScreen() {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(true);
   const [deletingItems, setDeletingItems] = useState<Set<number>>(new Set());
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
+  const [reasonInput, setReasonInput] = useState('');
+  const [isReasonModalVisible, setIsReasonModalVisible] = useState(false);
+  const [isSubmittingRequest, setIsSubmittingRequest] = useState(false);
 
   useEffect(() => {
     if (session?.userId) {
@@ -187,9 +196,132 @@ export default function CartScreen() {
     );
   };
 
+  const handleItemSelection = (itemId: number) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(itemId)) {
+        newSet.delete(itemId);
+      } else {
+        newSet.add(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedItems.size === cartItems.length) {
+      setSelectedItems(new Set());
+    } else {
+      setSelectedItems(new Set(cartItems.map(item => item.id)));
+    }
+  };
+
+  const handleRequestSelected = () => {
+    if (selectedItems.size === 0) return;
+    
+    // Check if user can make requests
+    if (!canRequestMedicine()) {
+      if (isPendingUser()) {
+        Alert.alert('Account Pending', 'Your account is pending approval. You can only view content at this time.');
+      } else {
+        Alert.alert('Permission Denied', 'Your account status does not allow medicine requests.');
+      }
+      return;
+    }
+    
+    // Show reason input modal instead of routing
+    setIsReasonModalVisible(true);
+  };
+
+  const handleSubmitRequest = async () => {
+    if (!reasonInput.trim()) {
+      Alert.alert('Error', 'Please provide a reason for your medicine request');
+      return;
+    }
+
+    if (!axiosInstance || !session?.userId) {
+      Alert.alert('Error', 'No authentication available');
+      return;
+    }
+
+    setIsSubmittingRequest(true);
+    
+    try {
+      // Get selected cart items
+      const selectedCartItems = getSelectedItems();
+      
+      // Transform cart items to request format
+      const requestData: CreateMedicineRequestData = {
+        userId: parseInt(session.userId),
+        reason: reasonInput.trim(),
+        medicines: selectedCartItems.map(item => ({
+          medicineId: item.medicineId,
+          quantity: item.quantity,
+        })),
+      };
+
+      // Call the bulk request API (even for single user, it handles both cases)
+      const response = await createBulkMedicineRequests(axiosInstance, [requestData]);
+      
+      // Show success message
+      Alert.alert(
+        'Success',
+        `Successfully created medicine request with ${response.totalMedicinesRequested} medicine(s)`,
+        [
+          {
+            text: 'OK',
+            onPress: () => {
+              // Clear selection and close modal
+              setSelectedItems(new Set());
+              setIsReasonModalVisible(false);
+              setReasonInput('');
+              // Refresh cart items
+              fetchCartItems(1, false, false);
+            }
+          }
+        ]
+      );
+      
+    } catch (error: any) {
+      console.error('Error creating medicine request:', error);
+      
+      let errorMessage = 'Failed to create medicine request';
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setIsSubmittingRequest(false);
+    }
+  };
+
+  const getSelectedItemsCount = () => selectedItems.size;
+
+  const getSelectedItems = () => {
+    return cartItems.filter(item => selectedItems.has(item.id));
+  };
+
   const renderCartItem = ({ item }: { item: CartItemWithAvailability }) => (
     <View className={`p-4 mb-3 bg-white rounded-xl shadow-sm ${deletingItems.has(item.id) ? 'opacity-50' : ''}`}>
       <View className="flex-row items-center">
+        {/* Selection Checkbox */}
+        <TouchableOpacity 
+          onPress={() => handleItemSelection(item.id)}
+          className="mr-3"
+        >
+          <View className={`w-6 h-6 rounded-md border-2 items-center justify-center ${
+            selectedItems.has(item.id) 
+              ? 'bg-blue-600 border-blue-600' 
+              : 'border-gray-300'
+          }`}>
+            {selectedItems.has(item.id) && (
+              <Ionicons name="checkmark" size={16} color="white" />
+            )}
+          </View>
+        </TouchableOpacity>
+
         <View className="justify-center items-center mr-4 w-12 h-12 bg-blue-100 rounded-lg">
           <Ionicons name="medical-outline" size={24} color="#3B82F6" />
         </View>
@@ -312,6 +444,23 @@ export default function CartScreen() {
           </View>
         </View>
 
+        {/* Permission Status Message */}
+        {!canRequestMedicine() && (
+          <View className="px-6 pb-4">
+            <View className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <View className="flex-row justify-center items-center">
+                <Ionicons name="information-circle" size={16} color="#3B82F6" />
+                <ThemedText weight="medium" className="ml-2 text-center text-blue-700">
+                  {isPendingUser() 
+                    ? 'Your account is pending approval. You can view your cart but cannot make requests until approved.'
+                    : 'You do not have permission to make medicine requests at this time.'
+                  }
+                </ThemedText>
+              </View>
+            </View>
+          </View>
+        )}
+
         <FlatList
           className="flex-1 px-6"
           data={cartItems}
@@ -333,7 +482,7 @@ export default function CartScreen() {
           }
           ListHeaderComponent={() => (
             cartSummary ? (
-              <View className="mb-6">
+              <View className="flex-col gap-3 mb-5">
                 <View className="p-6 bg-white rounded-2xl shadow-lg">
                   <View className="mb-4">
                     <ThemedText weight="bold" className="mb-1 text-lg text-gray-800">
@@ -405,10 +554,129 @@ export default function CartScreen() {
                     </View>
                   )}
                 </View>
+                {/* Selection Controls */}
+                {cartItems.length > 0 && (
+                  <View className="">
+                    <View className="flex-row justify-between items-center p-4 bg-white rounded-xl shadow-sm">
+                      <TouchableOpacity 
+                        onPress={handleSelectAll}
+                        className="flex-row items-center"
+                      >
+                        <View className={`w-5 h-5 rounded-md border-2 items-center justify-center mr-2 ${
+                          selectedItems.size === cartItems.length 
+                            ? 'bg-blue-600 border-blue-600' 
+                            : 'border-gray-300'
+                        }`}>
+                          {selectedItems.size === cartItems.length && (
+                            <Ionicons name="checkmark" size={14} color="white" />
+                          )}
+                        </View>
+                        <ThemedText weight="medium" className="text-gray-700">
+                          {selectedItems.size === cartItems.length ? 'Deselect All' : 'Select All'}
+                        </ThemedText>
+                      </TouchableOpacity>
+                      
+                      {selectedItems.size > 0 && (
+                        <ThemedText weight="medium" className="text-blue-600">
+                          {getSelectedItemsCount()} selected
+                        </ThemedText>
+                      )}
+                    </View>
+                  </View>
+                )}
               </View>
             ) : null
           )}
         />
+
+        {/* Request Now Button */}
+        {selectedItems.size > 0 && (
+          <View className="px-6 py-4 bg-white border-t border-gray-200">
+            <PermissionGate requireCanMakeRequests fallback={
+              <View className="p-4 bg-gray-100 rounded-xl">
+                <View className="flex-row justify-center items-center">
+                  <Ionicons name="information-circle" size={20} color="#6B7280" />
+                  <ThemedText weight="medium" className="ml-2 text-center text-gray-600">
+                    {isPendingUser() 
+                      ? 'Your account is pending approval. You can only view content at this time.'
+                      : 'You do not have permission to make medicine requests.'
+                    }
+                  </ThemedText>
+                </View>
+              </View>
+            }>
+              <TouchableOpacity
+                className="flex-row justify-center items-center py-4 bg-blue-600 rounded-xl"
+                onPress={handleRequestSelected}
+              >
+                <Ionicons name="flash" size={20} color="white" />
+                <ThemedText weight="semibold" className="ml-2 text-lg text-white">
+                  Request Now ({getSelectedItemsCount()} items)
+                </ThemedText>
+              </TouchableOpacity>
+            </PermissionGate>
+          </View>
+        )}
+
+        {/* Reason Input Modal */}
+        <Modal
+          visible={isReasonModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setIsReasonModalVisible(false)}
+        >
+          <View className="flex-1 justify-center items-center px-6 bg-opacity-50 bg-black/40">
+            <View className="p-6 w-full max-w-sm bg-white rounded-2xl shadow-xl">
+              <View className="mb-4">
+                <ThemedText weight="bold" className="mb-2 text-lg text-gray-800">
+                  Medicine Request
+                </ThemedText>
+                <ThemedText weight="regular" className="text-sm text-gray-600">
+                  Please provide a reason for requesting {getSelectedItemsCount()} medicine(s)
+                </ThemedText>
+              </View>
+              
+              <TextInput
+                className="p-4 mb-4 w-full text-gray-800 rounded-xl border border-gray-300"
+                placeholder="Enter reason for request..."
+                value={reasonInput}
+                onChangeText={setReasonInput}
+                multiline
+                numberOfLines={3}
+                textAlignVertical="top"
+              />
+              
+              <View className="flex-col gap-3">
+                <TouchableOpacity
+                  className="px-4 py-4 rounded-xl border border-gray-300"
+                  onPress={() => {
+                    setIsReasonModalVisible(false);
+                    setReasonInput('');
+                  }}
+                  disabled={isSubmittingRequest}
+                >
+                  <ThemedText weight="medium" className="text-center text-black">
+                    Cancel
+                  </ThemedText>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  className="px-4 py-4 bg-blue-600 rounded-xl"
+                  onPress={handleSubmitRequest}
+                  disabled={isSubmittingRequest}
+                >
+                  {isSubmittingRequest ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <ThemedText weight="semibold" className="text-center text-white">
+                      Submit Request
+                    </ThemedText>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </View>
     </ViewLayout>
   );

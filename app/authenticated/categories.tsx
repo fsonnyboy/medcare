@@ -8,6 +8,8 @@ import { useContextProvider } from '@/context/ctx';
 import { getMedicinesByCategory } from '@/queries/medicine/medicineByCategory';
 import { MedicineWithCategories, CategoryStatistics, MedicineByCategoryResponse } from '@/types/medicine-queries';
 
+type MedicineType = 'all' | 'otc' | 'prescription';
+
 export default function CategoriesScreen() {
     const { axiosInstance } = useContextProvider();
     const { categoryName, categoryId } = useLocalSearchParams<{ categoryName: string; categoryId: string }>();
@@ -20,12 +22,13 @@ export default function CategoriesScreen() {
     const [currentPage, setCurrentPage] = useState(1);
     const [hasNextPage, setHasNextPage] = useState(true);
     const [paginationInfo, setPaginationInfo] = useState<any>(null);
+    const [selectedType, setSelectedType] = useState<MedicineType>('all');
 
     useEffect(() => {
         if (categoryId) {
             fetchMedicines(1, false, false);
         }
-    }, [categoryId]);
+    }, [categoryId, selectedType]);
 
     const fetchMedicines = async (page: number = 1, isLoadMore: boolean = false, isRefresh = false) => {
         if (!axiosInstance) {
@@ -48,10 +51,20 @@ export default function CategoriesScreen() {
             }
             setError(null);
             
+            // Determine the type parameter based on selection
+            let typeParam: 'OTC' | 'PRESCRIPTION' | undefined;
+            if (selectedType === 'otc') {
+                typeParam = 'OTC';
+            } else if (selectedType === 'prescription') {
+                typeParam = 'PRESCRIPTION';
+            }
+            // If 'all' is selected, typeParam remains undefined
+            
             const response: MedicineByCategoryResponse = await getMedicinesByCategory(axiosInstance, { 
                 categoryId: parseInt(categoryId),
                 page,
-                limit: 10 
+                limit: 10,
+                type: typeParam
             });
             
             if (isLoadMore) {
@@ -72,6 +85,13 @@ export default function CategoriesScreen() {
             setIsLoadingMore(false);
             setRefreshing(false);
         }
+    };
+
+    const handleTypeChange = (type: MedicineType) => {
+        setSelectedType(type);
+        setCurrentPage(1);
+        setMedicines([]);
+        setHasNextPage(true);
     };
 
     const onRefresh = () => {
@@ -240,6 +260,100 @@ export default function CategoriesScreen() {
                             {categoryName || 'Category'}
                         </ThemedText>
                         <View className='w-5 h-5'/>
+                    </View>
+                </View>
+
+                {/* Filter Card */}
+                <View className="px-6 mb-4">
+                    <View className="p-4 bg-white rounded-2xl shadow-lg">
+                        <ThemedText weight="bold" className="mb-3 text-gray-800">
+                            Filter by Type
+                        </ThemedText>
+                        <View className="flex-row space-x-4">
+                            {/* All Option */}
+                            <TouchableOpacity 
+                                className={`flex-row items-center px-4 py-2 rounded-lg border-2 ${
+                                    selectedType === 'all' 
+                                        ? 'border-blue-500 bg-blue-50' 
+                                        : 'border-gray-200 bg-gray-50'
+                                }`}
+                                onPress={() => handleTypeChange('all')}
+                            >
+                                <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
+                                    selectedType === 'all' 
+                                        ? 'border-blue-500 bg-blue-500' 
+                                        : 'border-gray-400'
+                                }`}>
+                                    {selectedType === 'all' && (
+                                        <View className="w-2 h-2 rounded-full bg-white m-0.5" />
+                                    )}
+                                </View>
+                                <ThemedText 
+                                    weight="medium" 
+                                    className={`text-sm ${
+                                        selectedType === 'all' ? 'text-blue-700' : 'text-gray-600'
+                                    }`}
+                                >
+                                    All
+                                </ThemedText>
+                            </TouchableOpacity>
+
+                            {/* OTC Option */}
+                            <TouchableOpacity 
+                                className={`flex-row items-center px-4 py-2 rounded-lg border-2 ${
+                                    selectedType === 'otc' 
+                                        ? 'border-green-500 bg-green-50' 
+                                        : 'border-gray-200 bg-gray-50'
+                                }`}
+                                onPress={() => handleTypeChange('otc')}
+                            >
+                                <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
+                                    selectedType === 'otc' 
+                                        ? 'border-green-500 bg-green-500' 
+                                        : 'border-gray-400'
+                                }`}>
+                                    {selectedType === 'otc' && (
+                                        <View className="w-2 h-2 rounded-full bg-white m-0.5" />
+                                    )}
+                                </View>
+                                <ThemedText 
+                                    weight="medium" 
+                                    className={`text-sm ${
+                                        selectedType === 'otc' ? 'text-green-700' : 'text-gray-600'
+                                    }`}
+                                >
+                                    OTC
+                                </ThemedText>
+                            </TouchableOpacity>
+
+                            {/* Prescription Option */}
+                            <TouchableOpacity 
+                                className={`flex-row items-center px-4 py-2 rounded-lg border-2 ${
+                                    selectedType === 'prescription' 
+                                        ? 'border-purple-500 bg-purple-50' 
+                                        : 'border-gray-200 bg-gray-50'
+                                }`}
+                                onPress={() => handleTypeChange('prescription')}
+                            >
+                                <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
+                                    selectedType === 'prescription' 
+                                        ? 'border-purple-500 bg-purple-500' 
+                                        : 'border-gray-400'
+                                }`}>
+                                    {selectedType === 'prescription' && (
+                                        <View className="w-2 h-2 rounded-full bg-white m-0.5" />
+                                    )}
+                                </View>
+                                <ThemedText 
+                                    weight="medium" 
+                                    className={`text-sm ${
+                                        selectedType === 'prescription' ? 'text-purple-700' : 'text-gray-600'
+                                    }`}
+                                >
+                                    Prescription
+                                </ThemedText>
+                            </TouchableOpacity>
+                        </View>
                     </View>
                 </View>
 

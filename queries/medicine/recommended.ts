@@ -12,7 +12,8 @@ export const getRecommendedMedicines = async (
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
     if (params.inStock !== undefined) searchParams.append('inStock', params.inStock.toString());
-
+    if (params.type) searchParams.append('type', params.type);
+    
     const response = await axiosInstance.get(`${BASE_URL}/medicine/recommended?${searchParams.toString()}`);
     return response.data;
   } catch (error) {

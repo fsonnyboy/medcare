@@ -91,4 +91,8 @@ export interface CreateRequestError {
   details?: any;
   stockErrors?: StockError[];
   status?: string;
+  unapprovedUsers?: Array<{
+    userId: number;
+    status: string;
+  }>;
 } 

@@ -8,6 +8,7 @@ import { getAxiosInstance } from '@/utils/axiosInstance';
 import { userData } from '@/utils/atom';
 import { useStorageState } from '@/utils/useStorageState';
 import { signin } from '@/mutations/auth/signin';
+import { AuthUser } from '@/types/auth';
 
 type LoginPayloadStatus = 'error' | 'success';
 
@@ -31,21 +32,19 @@ interface ErrorData {
     message: string;
 }
 
-interface LoginResponse {
-    message: string;
-    token: string;
-    userData: {
-        id: string;
-        email: string;
-    };
-}
-
 interface AuthContextProps {
     login: (credentials: Credentials) => Promise<LoginPayload> | null;
     logout: () => void;
     axiosInstance: any;
     session?: SessionData | null;
+    user?: AuthUser | null;
     isLoading: boolean;
+    // Helper functions for user status checking
+    isApprovedUser: () => boolean;
+    isPendingUser: () => boolean;
+    isRejectedUser: () => boolean;
+    canMakeRequests: () => boolean;
+    canAddToCart: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -53,7 +52,13 @@ const AuthContext = createContext<AuthContextProps>({
     logout: () => null,
     axiosInstance: null,
     session: null,
+    user: null,
     isLoading: false,
+    isApprovedUser: () => false,
+    isPendingUser: () => false,
+    isRejectedUser: () => false,
+    canMakeRequests: () => false,
+    canAddToCart: () => false,
 });
 
 export function useContextProvider(): AuthContextProps {
@@ -71,11 +76,13 @@ export const ContextProvider: React.FC<React.PropsWithChildren> = (props) => {
     const resetUserState = useResetRecoilState(userData);
     const [[isLoading, session], setSession] = useStorageState('session');
     const [isAuthenticating, setIsAuthenticating] = useState(false);
+    const [user, setUser] = useState<AuthUser | null>(null);
 
     const logout = useCallback(async () => {
         try {
             await AsyncStorage.removeItem('user');
             setSession(null);
+            setUser(null);
             resetUserState();
             setIsAuthenticating(false);
             router.replace('/');
@@ -90,10 +97,43 @@ export const ContextProvider: React.FC<React.PropsWithChildren> = (props) => {
         [session?.token, logout],
     );
 
+    // Helper functions for user status checking
+    const isApprovedUser = useCallback(() => {
+        return user?.status === 'APPROVED';
+    }, [user?.status]);
+
+    const isPendingUser = useCallback(() => {
+        return user?.status === 'PENDING';
+    }, [user?.status]);
+
+    const isRejectedUser = useCallback(() => {
+        return user?.status === 'REJECTED';
+    }, [user?.status]);
+
+    const canMakeRequests = useCallback(() => {
+        // Only approved users can make requests
+        return isApprovedUser();
+    }, [isApprovedUser]);
+
+    const canAddToCart = useCallback(() => {
+        // Only approved users can add to cart
+        return isApprovedUser();
+    }, [isApprovedUser]);
+
     useEffect(() => {
         const validateSession = async () => {
             if (isLoading) return;
             if (session?.token && session?.userId) {
+                // Load user data from AsyncStorage if available
+                try {
+                    const userDataString = await AsyncStorage.getItem('user');
+                    if (userDataString) {
+                        const userData = JSON.parse(userDataString);
+                        setUser(userData);
+                    }
+                } catch (error) {
+                    console.error('Error loading user data:', error);
+                }
                 router.replace('/authenticated');
             }
         };
@@ -121,6 +161,9 @@ export const ContextProvider: React.FC<React.PropsWithChildren> = (props) => {
                     new Promise((resolve) => setUserState(user)),
                 ]);
 
+                // Set user in local state
+                setUser(user);
+
                 return { status: 'success' };
             } catch (error) {
                 const axiosError = error as AxiosError<ErrorData>;
@@ -144,8 +187,14 @@ export const ContextProvider: React.FC<React.PropsWithChildren> = (props) => {
                 login,
                 logout,
                 session,
+                user,
                 isLoading: isAuthenticating || isLoading,
                 axiosInstance,
+                isApprovedUser,
+                isPendingUser,
+                isRejectedUser,
+                canMakeRequests,
+                canAddToCart,
             }}>
             {props.children}
         </AuthContext.Provider>

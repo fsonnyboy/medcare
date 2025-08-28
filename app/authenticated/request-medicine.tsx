@@ -8,6 +8,8 @@ import { useContextProvider } from '@/context/ctx';
 import { getMedicineById, MedicineByIdResponse } from '@/queries/medicine/medicineById';
 import { getUserData } from '@/queries/profile/user-data';
 import { createMedicineRequest } from '@/mutations/medicine/request';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { PermissionGate } from '@/components/PermissionGate';
 
 // Utility function to calculate age from birthdate
 const calculateAge = (birthDate: string): number => {
@@ -34,6 +36,7 @@ const getFullName = (user: any): string => {
 export default function RequestMedicine() {
     const params = useLocalSearchParams();
     const { axiosInstance, session } = useContextProvider();
+    const { canRequestMedicine, hasReachedRequestLimits, remainingRequests, currentRequestCount, maxAllowedRequests, isLoadingLimits } = useUserPermissions();
     const [quantity, setQuantity] = useState(1);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
     const [isLoadingMedicine, setIsLoadingMedicine] = useState(true);
@@ -129,6 +132,16 @@ export default function RequestMedicine() {
     };
 
     const validateForm = () => {
+        // Check if user can make requests
+        if (!canRequestMedicine()) {
+            if (hasReachedRequestLimits) {
+                Alert.alert('Request Limit Reached', `You have reached your monthly limit of ${maxAllowedRequests} requests.`);
+            } else {
+                Alert.alert('Permission Denied', 'Your account status does not allow medicine requests.');
+            }
+            return false;
+        }
+
         if (!formData.fullName.trim()) {
             Alert.alert('Error', 'Please enter your full name');
             return false;
@@ -545,36 +558,66 @@ export default function RequestMedicine() {
 
                 {/* Action Buttons */}
                 <View className="px-6 py-4">
-                    <TouchableOpacity
-                        className={`flex-row justify-center items-center py-4 mb-3 rounded-xl ${
-                            isSubmitting || (medicine && medicine.stock === 0) ? 'bg-gray-400' : 'bg-[#0D8AED]'
-                        }`}
-                        onPress={handleSubmitRequest}
-                        disabled={isSubmitting || (medicine && medicine.stock === 0)}
-                    >
-                        {isSubmitting ? (
-                            <>
-                                <ActivityIndicator size="small" color="white" />
-                                <ThemedText weight="semibold" className="ml-2 text-lg text-white">
-                                    Submitting...
+                    {/* Permission Gate for Submit Button */}
+                    <PermissionGate requireCanMakeRequests fallback={
+                        <View className="p-4 mb-3 bg-gray-100 rounded-xl">
+                            <View className="flex-row justify-center items-center">
+                                <Ionicons name="information-circle" size={20} color="#6B7280" />
+                                <ThemedText weight="medium" className="ml-2 text-center text-gray-600">
+                                    {hasReachedRequestLimits 
+                                        ? `You have reached your monthly limit of ${maxAllowedRequests} requests.`
+                                        : 'Your account is pending approval. You can only view content at this time.'
+                                    }
                                 </ThemedText>
-                            </>
-                        ) : medicine && medicine.stock === 0 ? (
-                            <>
-                                <ThemedText weight="semibold" className="mr-2 text-lg text-white">
-                                    Out of Stock
+                            </View>
+                        </View>
+                    }>
+                        <TouchableOpacity
+                            className={`flex-row justify-center items-center py-4 mb-3 rounded-xl ${
+                                isSubmitting || (medicine && medicine.stock === 0) ? 'bg-gray-400' : 'bg-[#0D8AED]'
+                            }`}
+                            onPress={handleSubmitRequest}
+                            disabled={isSubmitting || (medicine && medicine.stock === 0)}
+                        >
+                            {isSubmitting ? (
+                                <>
+                                    <ActivityIndicator size="small" color="white" />
+                                    <ThemedText weight="semibold" className="ml-2 text-lg text-white">
+                                        Submitting...
+                                    </ThemedText>
+                                </>
+                            ) : medicine && medicine.stock === 0 ? (
+                                <>
+                                    <ThemedText weight="semibold" className="mr-2 text-lg text-white">
+                                        Out of Stock
+                                    </ThemedText>
+                                    <Ionicons name="close-circle" size={20} color="white" />
+                                </>
+                            ) : (
+                                <>
+                                    <ThemedText weight="semibold" className="mr-2 text-lg text-white">
+                                        Submit Request
+                                    </ThemedText>
+                                    <Ionicons name="paper-plane" size={20} color="white" />
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </PermissionGate>
+                    
+                    {/* Request Limit Status */}
+                    {canRequestMedicine() && (
+                        <View className="p-3 mb-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <View className="flex-row justify-center items-center">
+                                <Ionicons name="information-circle" size={16} color="#3B82F6" />
+                                <ThemedText weight="medium" className="ml-2 text-center text-blue-700">
+                                    {isLoadingLimits 
+                                        ? 'Checking request limits...'
+                                        : `You can make ${remainingRequests} more request(s) this month.`
+                                    }
                                 </ThemedText>
-                                <Ionicons name="close-circle" size={20} color="white" />
-                            </>
-                        ) : (
-                            <>
-                                <ThemedText weight="semibold" className="mr-2 text-lg text-white">
-                                    Submit Request
-                                </ThemedText>
-                                <Ionicons name="paper-plane" size={20} color="white" />
-                            </>
-                        )}
-                    </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
                 </View>
             </View>
         </ViewLayout>

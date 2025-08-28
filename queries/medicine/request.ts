@@ -18,7 +18,7 @@ export const getMedicineRequests = async (
     if (params.page) searchParams.append('page', params.page.toString());
     if (params.limit) searchParams.append('limit', params.limit.toString());
 
-    const response = await axiosInstance.get(`${BASE_URL}/medicine/request?${searchParams.toString()}`);
+    const response = await axiosInstance.get(`${BASE_URL}/medicine/requests?${searchParams.toString()}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching medicine requests:', error);

@@ -6,10 +6,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useContextProvider } from '@/context/ctx';
 import { getMedicineById, MedicineByIdResponse } from '@/queries/medicine/medicineById';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { PermissionGate } from '@/components/PermissionGate';
 
 export default function MedicineDetail() {
     const params = useLocalSearchParams();
     const { axiosInstance } = useContextProvider();
+    const { canAddToCart, canRequestMedicine, isApprovedUser, isPendingUser } = useUserPermissions();
     const [medicine, setMedicine] = useState<MedicineByIdResponse['medicine'] | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
@@ -41,12 +44,32 @@ export default function MedicineDetail() {
     }, [medicineId, axiosInstance]);
 
     const handleRequestNow = () => {
+        // Check if user can make requests
+        if (!canRequestMedicine()) {
+            if (isPendingUser()) {
+                Alert.alert('Account Pending', 'Your account is pending approval. You can only view content at this time.');
+            } else {
+                Alert.alert('Permission Denied', 'Your account status does not allow medicine requests.');
+            }
+            return;
+        }
+        
         if (medicine) {
             router.push(`/authenticated/request-medicine?id=${medicine.id}` as any);
         }
     };
 
     const handleAddToCart = () => {
+        // Check if user can add to cart
+        if (!canAddToCart()) {
+            if (isPendingUser()) {
+                Alert.alert('Account Pending', 'Your account is pending approval. You can only view content at this time.');
+            } else {
+                Alert.alert('Permission Denied', 'Your account status does not allow adding items to cart.');
+            }
+            return;
+        }
+        
         if (medicine) {
             router.push(`/authenticated/add-to-cart?id=${medicine.id}` as any);
         }
@@ -111,6 +134,23 @@ export default function MedicineDetail() {
                         </ThemedText>
                     </View>
                 </View>
+
+                {/* Permission Status Message */}
+                {(!canAddToCart() || !canRequestMedicine()) && (
+                    <View className="px-6 pb-4">
+                        <View className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+                            <View className="flex-row items-center justify-center">
+                                <Ionicons name="information-circle" size={16} color="#3B82F6" />
+                                <ThemedText weight="medium" className="ml-2 text-blue-700 text-center">
+                                    {isPendingUser() 
+                                        ? 'Your account is pending approval. You can view medicine details but cannot make requests or add to cart until approved.'
+                                        : 'You have limited permissions for this medicine. Contact support if you believe this is an error.'
+                                    }
+                                </ThemedText>
+                            </View>
+                        </View>
+                    </View>
+                )}
 
                 <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
                     {/* Product Overview Card */}
@@ -217,32 +257,60 @@ export default function MedicineDetail() {
                 {/* Bottom Action Buttons */}
                 <View className="gap-2 px-6 py-4 space-y-3">
                     {/* Add to Cart Button */}
-                    <TouchableOpacity
-                        className={`flex-row justify-center items-center py-4 rounded-xl ${
-                            medicine.stock > 0 ? 'bg-[#10B981]' : 'bg-gray-400'
-                        }`}
-                        onPress={handleAddToCart}
-                        disabled={medicine.stock <= 0}
-                    >
-                        <Ionicons name="cart" size={20} color="white" />
-                        <ThemedText weight="semibold" className="ml-2 text-lg text-white">
-                            {medicine.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
-                        </ThemedText>
-                    </TouchableOpacity>
+                    <PermissionGate requireCanAddToCart fallback={
+                        <View className="p-4 bg-gray-100 rounded-xl">
+                            <View className="flex-row items-center justify-center">
+                                <Ionicons name="information-circle" size={20} color="#6B7280" />
+                                <ThemedText weight="medium" className="ml-2 text-gray-600 text-center">
+                                    {isPendingUser() 
+                                        ? 'Your account is pending approval. You can only view content at this time.'
+                                        : 'You do not have permission to add items to cart.'
+                                    }
+                                </ThemedText>
+                            </View>
+                        </View>
+                    }>
+                        <TouchableOpacity
+                            className={`flex-row justify-center items-center py-4 rounded-xl ${
+                                medicine.stock > 0 ? 'bg-[#10B981]' : 'bg-gray-400'
+                            }`}
+                            onPress={handleAddToCart}
+                            disabled={medicine.stock <= 0}
+                        >
+                            <Ionicons name="cart" size={20} color="white" />
+                            <ThemedText weight="semibold" className="ml-2 text-lg text-white">
+                                {medicine.stock > 0 ? 'Add to Cart' : 'Out of Stock'}
+                            </ThemedText>
+                        </TouchableOpacity>
+                    </PermissionGate>
 
                     {/* Request Now Button */}
-                    <TouchableOpacity
-                        className={`flex-row justify-center items-center py-4 rounded-xl ${
-                            medicine.stock > 0 ? 'bg-[#0D8AED]' : 'bg-gray-400'
-                        }`}
-                        onPress={handleRequestNow}
-                        disabled={medicine.stock <= 0}
-                    >
-                        <Ionicons name="flash" size={20} color="white" />
-                        <ThemedText weight="semibold" className="ml-2 text-lg text-white">
-                            {medicine.stock > 0 ? 'Request Now' : 'Out of Stock'}
-                        </ThemedText>
-                    </TouchableOpacity>
+                    <PermissionGate requireCanMakeRequests fallback={
+                        <View className="p-4 bg-gray-100 rounded-xl">
+                            <View className="flex-row items-center justify-center">
+                                <Ionicons name="information-circle" size={20} color="#6B7280" />
+                                <ThemedText weight="medium" className="ml-2 text-gray-600 text-center">
+                                    {isPendingUser() 
+                                        ? 'Your account is pending approval. You can only view content at this time.'
+                                        : 'You do not have permission to make medicine requests.'
+                                    }
+                                </ThemedText>
+                            </View>
+                        </View>
+                    }>
+                        <TouchableOpacity
+                            className={`flex-row justify-center items-center py-4 rounded-xl ${
+                                medicine.stock > 0 ? 'bg-[#0D8AED]' : 'bg-gray-400'
+                            }`}
+                            onPress={handleRequestNow}
+                            disabled={medicine.stock <= 0}
+                        >
+                            <Ionicons name="flash" size={20} color="white" />
+                            <ThemedText weight="semibold" className="ml-2 text-lg text-white">
+                                {medicine.stock > 0 ? 'Request Now' : 'Out of Stock'}
+                            </ThemedText>
+                        </TouchableOpacity>
+                    </PermissionGate>
                 </View>
             </View>
         </ViewLayout>
