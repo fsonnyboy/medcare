@@ -1,2 +1,4 @@
 // Update this URL to match your Next.js server
-export const BASE_URL = 'http://10.208.207.115:3000/api/mobile'; // or your actual Next.js server URL
+export const BASE_URL = __DEV__ 
+    ? 'http://172.24.160.1:3000/api/mobile' // Your local development server
+    : 'https://medcare-eight-silk.vercel.app/api/mobile'; // Production server

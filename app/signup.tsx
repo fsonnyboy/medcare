@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert, ActivityIndicator } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
@@ -7,6 +7,8 @@ import { router } from 'expo-router';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
 import CustomDatePicker from '@/components/custom-date-picker';
+import { configureGoogleSignIn } from '@/utils/googleAuth';
+import { useContextProvider } from '@/context/ctx';
 
 import { signup, validateSignupData } from '@/mutations/auth/signup';
 import { SignupData } from '@/types/auth';
@@ -34,10 +36,16 @@ const SignUpSchema = Yup.object().shape({
 });
 
 export default function SignUp() {
+    const { googleSignup } = useContextProvider();
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const formikRef = useRef<any>(null);
+
+    // Configure Google Sign-In on component mount
+    useEffect(() => {
+        configureGoogleSignIn();
+    }, []);
 
     const handleSignUp = async (values: any) => {
         setIsLoading(true);
@@ -84,6 +92,22 @@ export default function SignUp() {
             Alert.alert('Registration Failed', errorMessage);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleGoogleSignUp = async () => {
+        try {
+            const result = await googleSignup();
+            if (result?.status === 'error') {
+                Alert.alert('Error', result.message || 'Google signup failed');
+            } else if (result?.status === 'success') {
+                if (result.message) {
+                    Alert.alert('Success', result.message);
+                }
+                router.push('/');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'An unexpected error occurred during Google signup');
         }
     };
 
@@ -309,14 +333,35 @@ export default function SignUp() {
                                                 <Ionicons name="arrow-forward" size={20} color="white" />
                                             </>
                                         )}
-                                    </TouchableOpacity>
-                                </>
-                            )}
-                        </Formik>
+                                                        </TouchableOpacity>
+
+                    {/* Divider */}
+                    <View className="flex-row items-center my-6">
+                        <View className="flex-1 h-px bg-gray-300" />
+                        <ThemedText weight="medium" className="mx-4 text-gray-500">
+                            Or continue with
+                        </ThemedText>
+                        <View className="flex-1 h-px bg-gray-300" />
                     </View>
 
-                    {/* Sign In Link */}
-                    <View className="flex-row justify-center mb-8">
+                    {/* Google Sign Up Button */}
+                    <TouchableOpacity
+                        className="flex-row justify-center items-center py-3 mb-6 bg-white rounded-xl border border-gray-200"
+                        onPress={handleGoogleSignUp}
+                        disabled={isLoading}
+                    >
+                        <Text className="mr-2 text-lg font-bold text-red-500">G</Text>
+                        <ThemedText weight="medium" className="text-gray-700">
+                            Continue with Google
+                        </ThemedText>
+                    </TouchableOpacity>
+                </>
+            )}
+        </Formik>
+    </View>
+
+    {/* Sign In Link */}
+    <View className="flex-row justify-center mb-8">
                         <ThemedText weight="regular" className="text-gray-900">
                             Already have an account?{' '}
                         </ThemedText>

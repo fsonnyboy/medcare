@@ -8,9 +8,11 @@ import { useContextProvider } from '@/context/ctx';
 import { getRecommendedMedicines } from '@/queries/medicine/recommended';
 import { getMedicineCategories } from '@/queries/medicine/categories';
 import { MedicineExtended } from '@/types/common';
-import { MedicineCategory } from '@/types/medicine-queries';
+import { MedicineCategory, RecommendedParams } from '@/types/medicine-queries';
 import { useRecoilValue } from 'recoil';
 import { userData } from '@/utils/atom';
+
+type MedicineType = 'OTC' | 'PRESCRIPTION';
 
 export default function Authenticated() {
     const { axiosInstance } = useContextProvider();
@@ -21,12 +23,13 @@ export default function Authenticated() {
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [categoriesError, setCategoriesError] = useState<string | null>(null);
+    const [selectedMedicineType, setSelectedMedicineType] = useState<MedicineType>('OTC');
 
     
     useEffect(() => {
         fetchRecommendedMedicines();
         fetchMedicineCategories();
-    }, []);
+    }, [selectedMedicineType]);
 
     const fetchMedicineCategories = async () => {
         if (!axiosInstance) {
@@ -58,7 +61,14 @@ export default function Authenticated() {
         try {
             setIsLoading(true);
             setError(null);
-            const response = await getRecommendedMedicines(axiosInstance, { limit: 10 });
+            
+            // Build parameters object to avoid undefined values being sent as null
+            const params: RecommendedParams = { 
+                limit: 10,
+                type: selectedMedicineType
+            };
+            
+            const response = await getRecommendedMedicines(axiosInstance, params);
             setRecommendedMedicines(response.medicines);
         } catch (err) {
             console.error('Error fetching recommended medicines:', err);
@@ -379,6 +389,72 @@ export default function Authenticated() {
                                 <Ionicons name="chevron-forward" size={16} color="white" />
                             </TouchableOpacity>
                         </View>
+                        
+                        {/* Medicine Type Filter */}
+                        <View className="flex-row p-2 mb-4 bg-white rounded-xl">
+                            <TouchableOpacity
+                                className={`flex-1 py-2 px-4 rounded-lg mr-2 ${
+                                    selectedMedicineType === 'OTC' 
+                                        ? 'bg-blue-500' 
+                                        : 'bg-gray-100'
+                                }`}
+                                onPress={() => setSelectedMedicineType('OTC')}
+                            >
+                                <View className="flex-row justify-center items-center">
+                                    <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
+                                        selectedMedicineType === 'OTC'
+                                            ? 'bg-white border-white'
+                                            : 'border-gray-400'
+                                    }`}>
+                                        {selectedMedicineType === 'OTC' && (
+                                            <View className="w-2 h-2 bg-blue-500 rounded-full self-center mt-0.5" />
+                                        )}
+                                    </View>
+                                    <ThemedText 
+                                        weight="medium" 
+                                        className={`text-center ${
+                                            selectedMedicineType === 'OTC' 
+                                                ? 'text-white' 
+                                                : 'text-gray-700'
+                                        }`}
+                                    >
+                                        OTC
+                                    </ThemedText>
+                                </View>
+                            </TouchableOpacity>
+                            
+                            <TouchableOpacity
+                                className={`flex-1 py-2 px-4 rounded-lg ${
+                                    selectedMedicineType === 'PRESCRIPTION' 
+                                        ? 'bg-blue-500' 
+                                        : 'bg-gray-100'
+                                }`}
+                                onPress={() => setSelectedMedicineType('PRESCRIPTION')}
+                            >
+                                <View className="flex-row justify-center items-center">
+                                    <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
+                                        selectedMedicineType === 'PRESCRIPTION'
+                                            ? 'bg-white border-white'
+                                            : 'border-gray-400'
+                                    }`}>
+                                        {selectedMedicineType === 'PRESCRIPTION' && (
+                                            <View className="w-2 h-2 bg-blue-500 rounded-full self-center mt-0.5" />
+                                        )}
+                                    </View>
+                                    <ThemedText 
+                                        weight="medium" 
+                                        className={`text-center ${
+                                            selectedMedicineType === 'PRESCRIPTION' 
+                                                ? 'text-white' 
+                                                : 'text-gray-700'
+                                        }`}
+                                    >
+                                        Prescription
+                                    </ThemedText>
+                                </View>
+                            </TouchableOpacity>
+                        </View>
+                        
                         {renderRecommendedSection()}
                     </View>
 

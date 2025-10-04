@@ -81,4 +81,29 @@ export interface SignupData {
     error: string;
     details?: any;
     status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  }
+
+  // Google OAuth interfaces
+  export interface GoogleAuthData {
+    idToken: string;
+    accessToken?: string;
+    user: {
+      id: string;
+      name: string;
+      email: string;
+      photo?: string;
+    };
+  }
+
+  export interface GoogleSigninResponse {
+    message: string;
+    user: AuthUser;
+    accessToken: string;
+    tokenType: string;
+    expiresIn: number;
+  }
+
+  export interface GoogleSignupResponse {
+    message: string;
+    user: AuthUser;
   } 

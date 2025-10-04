@@ -7,9 +7,9 @@ import { router } from 'expo-router';
 import { useContextProvider } from '@/context/ctx';
 import { getRecommendedMedicines } from '@/queries/medicine/recommended';
 import { MedicineExtended } from '@/types/common';
-import { RecommendedResponse } from '@/types/medicine-queries';
+import { RecommendedResponse, RecommendedParams } from '@/types/medicine-queries';
 
-type MedicineType = 'all' | 'otc' | 'prescription';
+type MedicineType = 'otc' | 'prescription';
 
 export default function RecommendedScreen() {
     const { axiosInstance } = useContextProvider();
@@ -20,7 +20,7 @@ export default function RecommendedScreen() {
     const [currentPage, setCurrentPage] = useState(1);
     const [hasNextPage, setHasNextPage] = useState(true);
     const [paginationInfo, setPaginationInfo] = useState<any>(null);
-    const [selectedType, setSelectedType] = useState<MedicineType>('all');
+    const [selectedType, setSelectedType] = useState<MedicineType>('otc');
 
     useEffect(() => {
         fetchRecommendedMedicines(1, false);
@@ -50,11 +50,16 @@ export default function RecommendedScreen() {
             }
             // If 'all' is selected, typeParam remains undefined
             
-            const response: RecommendedResponse = await getRecommendedMedicines(axiosInstance, { 
+            // Build parameters object, only including type if it's defined
+            const params: RecommendedParams = { 
                 page, 
-                limit: 10,
-                type: typeParam
-            });
+                limit: 10
+            };
+            if (typeParam) {
+                params.type = typeParam;
+            }
+            
+            const response: RecommendedResponse = await getRecommendedMedicines(axiosInstance, params);
             
             if (isLoadMore) {
                 setRecommendedMedicines(prev => [...prev, ...response.medicines]);
@@ -240,37 +245,9 @@ export default function RecommendedScreen() {
                             Filter by Type
                         </ThemedText>
                         <View className="flex-row space-x-4">
-                            {/* All Option */}
-                            <TouchableOpacity 
-                                className={`flex-row items-center px-4 py-2 rounded-lg border-2 ${
-                                    selectedType === 'all' 
-                                        ? 'border-blue-500 bg-blue-50' 
-                                        : 'border-gray-200 bg-gray-50'
-                                }`}
-                                onPress={() => handleTypeChange('all')}
-                            >
-                                <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
-                                    selectedType === 'all' 
-                                        ? 'border-blue-500 bg-blue-500' 
-                                        : 'border-gray-400'
-                                }`}>
-                                    {selectedType === 'all' && (
-                                        <View className="w-2 h-2 rounded-full bg-white m-0.5" />
-                                    )}
-                                </View>
-                                <ThemedText 
-                                    weight="medium" 
-                                    className={`text-sm ${
-                                        selectedType === 'all' ? 'text-blue-700' : 'text-gray-600'
-                                    }`}
-                                >
-                                    All
-                                </ThemedText>
-                            </TouchableOpacity>
-
                             {/* OTC Option */}
                             <TouchableOpacity 
-                                className={`flex-row items-center px-4 py-2 rounded-lg border-2 ${
+                                className={`flex-1 flex-row items-center justify-center px-4 py-2 rounded-lg border-2 ${
                                     selectedType === 'otc' 
                                         ? 'border-green-500 bg-green-50' 
                                         : 'border-gray-200 bg-gray-50'
@@ -298,7 +275,7 @@ export default function RecommendedScreen() {
 
                             {/* Prescription Option */}
                             <TouchableOpacity 
-                                className={`flex-row items-center px-4 py-2 rounded-lg border-2 ${
+                                className={`flex-1 flex-row items-center justify-center px-4 py-2 rounded-lg border-2 ${
                                     selectedType === 'prescription' 
                                         ? 'border-purple-500 bg-purple-50' 
                                         : 'border-gray-200 bg-gray-50'

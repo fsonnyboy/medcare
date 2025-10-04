@@ -2,6 +2,7 @@ import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import React, { useEffect } from 'react';
+import { View, Text } from 'react-native';
 import 'react-native-reanimated';
 import '../global.css';
 import {
@@ -34,13 +35,19 @@ export default function RootLayout() {
     });
 
     useEffect(() => {
+        console.log('Fonts loaded:', loaded);
         if (loaded) {
+            console.log('Hiding splash screen...');
             SplashScreen.hideAsync();
         }
     }, [loaded]);
 
     if (!loaded) {
-        return null;
+        return (
+            <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#ffffff' }}>
+                <Text>Loading fonts...</Text>
+            </View>
+        );
     }
 
     return (

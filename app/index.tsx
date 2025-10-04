@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { Formik } from 'formik';
 import * as Yup from 'yup';
+import { configureGoogleSignIn } from '@/utils/googleAuth';
 
 // Validation schema for signin
 const SignInSchema = Yup.object().shape({
@@ -19,9 +20,14 @@ const SignInSchema = Yup.object().shape({
 });
 
 export default function Index() {
-    const { login, isLoading } = useContextProvider();
+    const { login, googleLogin, isLoading } = useContextProvider();
     const [showPassword, setShowPassword] = useState(false);
     const [rememberMe, setRememberMe] = useState(false);
+
+    // Configure Google Sign-In on component mount
+    useEffect(() => {
+        configureGoogleSignIn();
+    }, []);
 
     const handleSignIn = async (values: { username: string; password: string }) => {
         try {
@@ -34,8 +40,15 @@ export default function Index() {
         }
     };
 
-    const handleGoogleSignIn = () => {
-        Alert.alert('Info', 'Google sign-in functionality would be implemented here');
+    const handleGoogleSignIn = async () => {
+        try {
+            const result = await googleLogin();
+            if (result?.status === 'error') {
+                Alert.alert('Error', result.message || 'Google sign-in failed');
+            }
+        } catch (error) {
+            Alert.alert('Error', 'An unexpected error occurred during Google sign-in');
+        }
     };
 
     const handleFacebookSignIn = () => {
@@ -199,8 +212,9 @@ export default function Index() {
                             <TouchableOpacity
                                 className="flex-row flex-1 justify-center items-center py-3 bg-white rounded-xl border border-gray-200"
                                 onPress={handleGoogleSignIn}
+                                disabled={isLoading}
                             >
-                                <Text className="mr-2 text-lg font-bold text-blue-500">G</Text>
+                                <Text className="mr-2 text-lg font-bold text-red-500">G</Text>
                                 <ThemedText weight="medium" className="text-gray-700">
                                     Google
                                 </ThemedText>
@@ -209,6 +223,7 @@ export default function Index() {
                             <TouchableOpacity
                                 className="flex-row flex-1 justify-center items-center py-3 bg-white rounded-xl border border-gray-200"
                                 onPress={handleFacebookSignIn}
+                                disabled={isLoading}
                             >
                                 <Text className="mr-2 text-lg font-bold text-blue-600">f</Text>
                                 <ThemedText weight="medium" className="text-gray-700">
