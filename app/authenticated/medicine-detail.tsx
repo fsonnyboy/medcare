@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, ActivityIndicator } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,11 +11,12 @@ import { PermissionGate } from '@/components/PermissionGate';
 
 export default function MedicineDetail() {
     const params = useLocalSearchParams();
-    const { axiosInstance } = useContextProvider();
+    const { axiosInstance, refreshUserData } = useContextProvider();
     const { canAddToCart, canRequestMedicine, isApprovedUser, isPendingUser } = useUserPermissions();
     const [medicine, setMedicine] = useState<MedicineByIdResponse['medicine'] | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [refreshing, setRefreshing] = useState(false);
 
     const medicineId = params.id ? parseInt(params.id as string) : null;
 
@@ -83,6 +84,22 @@ export default function MedicineDetail() {
         });
     };
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await refreshUserData();
+            // Re-fetch medicine data
+            if (medicineId && axiosInstance) {
+                const response = await getMedicineById(axiosInstance, medicineId);
+                setMedicine(response.medicine);
+            }
+        } catch (error) {
+            console.error('Error refreshing medicine detail:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     if (loading) {
         return (
             <ViewLayout scrollEnabled={false}>
@@ -121,7 +138,17 @@ export default function MedicineDetail() {
     }
 
     return (
-        <ViewLayout scrollEnabled={false}>
+        <ViewLayout 
+            scrollEnabled={true}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#3B82F6']}
+                    tintColor="#3B82F6"
+                />
+            }
+        >
             <View className="flex-1">
                 {/* Header */}
                 <View className="px-6 pt-12 pb-4">

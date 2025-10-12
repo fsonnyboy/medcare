@@ -15,7 +15,7 @@ import { getMedicineRequests } from '@/queries/medicine/request';
 import { MedicineRequest, RequestResponse } from '@/types/medicine-requests';
 
 const HistoryScreen = () => {
-  const { axiosInstance, user } = useContextProvider();
+  const { axiosInstance, user, refreshUserData } = useContextProvider();
   const [requests, setRequests] = useState<MedicineRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -82,8 +82,13 @@ const HistoryScreen = () => {
     fetchRequests();
   }, [axiosInstance, user]);
 
-  const onRefresh = () => {
-    fetchRequests(1, true);
+  const onRefresh = async () => {
+    try {
+      await refreshUserData();
+      await fetchRequests(1, true);
+    } catch (error) {
+      console.error('Error refreshing history:', error);
+    }
   };
 
   const loadMore = () => {
@@ -155,18 +160,18 @@ const HistoryScreen = () => {
         </ThemedText>
       </View>
 
-      <ThemedText weight="regular" className="text-base text-gray-800 mb-4 leading-5">
+      <ThemedText weight="regular" className="mb-4 text-base leading-5 text-gray-800">
         {item.reason || 'No reason provided'}
       </ThemedText>
 
       <View className="mb-4">
-        <ThemedText weight="semibold" className="text-sm text-gray-700 mb-2">
+        <ThemedText weight="semibold" className="mb-2 text-sm text-gray-700">
           Medicines ({item.totalMedicines || 0}):
         </ThemedText>
         {item.medicines && item.medicines.length > 0 ? (
           item.medicines.map((medicineItem) => (
-            <View key={medicineItem.id} className="flex-row justify-between items-center py-1 px-2 bg-gray-50 rounded-md mb-1">
-              <ThemedText weight="regular" className="text-sm text-gray-700 flex-1">
+            <View key={medicineItem.id} className="flex-row justify-between items-center px-2 py-1 mb-1 bg-gray-50 rounded-md">
+              <ThemedText weight="regular" className="flex-1 text-sm text-gray-700">
                 {medicineItem.medicine?.name || 'Unknown Medicine'}
               </ThemedText>
               <ThemedText weight="medium" className="text-xs text-gray-500">
@@ -175,14 +180,14 @@ const HistoryScreen = () => {
             </View>
           ))
         ) : (
-          <ThemedText weight="regular" className="text-sm text-gray-500 italic">
+          <ThemedText weight="regular" className="text-sm italic text-gray-500">
             No medicines in this request
           </ThemedText>
         )}
       </View>
 
-      <View className="border-t border-gray-200 pt-3">
-        <ThemedText weight="semibold" className="text-sm text-gray-700 text-right">
+      <View className="pt-3 border-t border-gray-200">
+        <ThemedText weight="semibold" className="text-sm text-right text-gray-700">
           Total Quantity: {item.totalQuantity || 0}
         </ThemedText>
       </View>
@@ -190,12 +195,12 @@ const HistoryScreen = () => {
   );
 
   const renderEmptyState = () => (
-    <View className="items-center justify-center py-15">
+    <View className="justify-center items-center py-15">
       <MaterialIcons name="history" size={64} color="#9ca3af" />
-      <ThemedText weight="semibold" className="text-xl text-gray-700 mt-4 mb-2">
+      <ThemedText weight="semibold" className="mt-4 mb-2 text-xl text-gray-700">
         No History Yet
       </ThemedText>
-      <ThemedText weight="regular" className="text-base text-gray-500 text-center leading-5">
+      <ThemedText weight="regular" className="text-base text-[#EF4444] text-center leading-5">
         Your medicine request history will appear here
       </ThemedText>
     </View>
@@ -207,7 +212,7 @@ const HistoryScreen = () => {
       <ThemedText weight="medium" className="mt-4 mb-2 text-lg text-red-600">
         Something went wrong
       </ThemedText>
-      <ThemedText weight="regular" className="text-base text-gray-600 text-center mb-4">
+      <ThemedText weight="regular" className="mb-4 text-base text-center text-gray-600">
         {error}
       </ThemedText>
       <TouchableOpacity 
@@ -295,7 +300,7 @@ const HistoryScreen = () => {
           ListEmptyComponent={renderEmptyState}
           ListFooterComponent={
             pagination.hasNextPage ? (
-              <View className="flex-row justify-center items-center py-4 gap-2">
+              <View className="flex-row gap-2 justify-center items-center py-4">
                 <ActivityIndicator size="small" color="#3B82F6" />
                 <ThemedText weight="regular" className="text-sm text-gray-500">
                   Loading more...

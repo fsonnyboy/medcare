@@ -1,19 +1,19 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, FlatList } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, Alert, ActivityIndicator, FlatList, RefreshControl } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useContextProvider } from '@/context/ctx';
-import { getRecommendedMedicines } from '@/queries/medicine/recommended';
+import { getMedicines } from '@/queries/medicine/recommended';
 import { MedicineExtended } from '@/types/common';
 import { RecommendedResponse, RecommendedParams } from '@/types/medicine-queries';
 
 type MedicineType = 'otc' | 'prescription';
 
 export default function RecommendedScreen() {
-    const { axiosInstance } = useContextProvider();
-    const [recommendedMedicines, setRecommendedMedicines] = useState<MedicineExtended[]>([]);
+    const { axiosInstance, refreshUserData } = useContextProvider();
+    const [medicines, setMedicines] = useState<MedicineExtended[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isLoadingMore, setIsLoadingMore] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -21,12 +21,19 @@ export default function RecommendedScreen() {
     const [hasNextPage, setHasNextPage] = useState(true);
     const [paginationInfo, setPaginationInfo] = useState<any>(null);
     const [selectedType, setSelectedType] = useState<MedicineType>('otc');
+    const [isRecommended, setIsRecommended] = useState<boolean | undefined>(undefined);
+    const [refreshing, setRefreshing] = useState(false);
 
     useEffect(() => {
-        fetchRecommendedMedicines(1, false);
-    }, [selectedType]);
+        // Reset pagination and medicines when filters change
+        setCurrentPage(1);
+        setMedicines([]);
+        setHasNextPage(true);
+        setError(null);
+        fetchMedicines(1, false);
+    }, [selectedType, isRecommended, axiosInstance]);
 
-    const fetchRecommendedMedicines = async (page: number = 1, isLoadMore: boolean = false) => {
+    const fetchMedicines = async (page: number = 1, isLoadMore: boolean = false) => {
         if (!axiosInstance) {
             setError('No authentication available');
             setIsLoading(false);
@@ -53,18 +60,19 @@ export default function RecommendedScreen() {
             // Build parameters object, only including type if it's defined
             const params: RecommendedParams = { 
                 page, 
-                limit: 10
+                limit: 10,
+                isRecommended: isRecommended
             };
             if (typeParam) {
                 params.type = typeParam;
             }
-            
-            const response: RecommendedResponse = await getRecommendedMedicines(axiosInstance, params);
+
+            const response: RecommendedResponse = await getMedicines(axiosInstance, params);
             
             if (isLoadMore) {
-                setRecommendedMedicines(prev => [...prev, ...response.medicines]);
+                setMedicines(prev => [...prev, ...response.medicines]);
             } else {
-                setRecommendedMedicines(response.medicines);
+                setMedicines(response.medicines);
             }
             
             setPaginationInfo(response.pagination);
@@ -81,9 +89,6 @@ export default function RecommendedScreen() {
 
     const handleTypeChange = (type: MedicineType) => {
         setSelectedType(type);
-        setCurrentPage(1);
-        setRecommendedMedicines([]);
-        setHasNextPage(true);
     };
 
     const getMedicineTypeColor = (type: string) => {
@@ -163,13 +168,13 @@ export default function RecommendedScreen() {
 
     const handleLoadMore = useCallback(() => {
         if (!isLoadingMore && hasNextPage) {
-            fetchRecommendedMedicines(currentPage + 1, true);
+            fetchMedicines(currentPage + 1, true);
         }
     }, [isLoadingMore, hasNextPage, currentPage]);
 
     const renderFooter = () => {
         // Only show footer when loading more AND we have existing data
-        if (!isLoadingMore || recommendedMedicines.length === 0) return null;
+        if (!isLoadingMore || medicines.length === 0) return null;
         
         return (
             <View className="items-center py-4">
@@ -187,7 +192,7 @@ export default function RecommendedScreen() {
                 <View className="items-center py-8">
                     <ActivityIndicator size="large" color="#f8f8ff" />
                     <ThemedText weight="regular" className="mt-2 text-[#f8f8ff]">
-                        Loading recommended medicines...
+                        Loading medicines...
                     </ThemedText>
                 </View>
             );
@@ -202,7 +207,7 @@ export default function RecommendedScreen() {
                     </ThemedText>
                     <TouchableOpacity 
                         className="px-4 py-2 mt-4 bg-blue-600 rounded-lg"
-                        onPress={() => fetchRecommendedMedicines(1, false)}
+                        onPress={() => fetchMedicines(1, false)}
                     >
                         <ThemedText weight="medium" className="text-white">
                             Retry
@@ -216,14 +221,40 @@ export default function RecommendedScreen() {
             <View className="items-center py-8">
                 <Ionicons name="medical-outline" size={48} color="#9CA3AF" />
                 <ThemedText weight="medium" className="mt-2 text-gray-500">
-                    No recommended medicines available
+                    No medicines available
                 </ThemedText>
             </View>
         );
     };
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await refreshUserData();
+            // Reset pagination and fetch fresh data
+            setCurrentPage(1);
+            setMedicines([]);
+            setHasNextPage(true);
+            await fetchMedicines(1, false);
+        } catch (error) {
+            console.error('Error refreshing recommended:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     return (
-        <ViewLayout scrollEnabled={false}>
+        <ViewLayout 
+            scrollEnabled={true}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#3B82F6']}
+                    tintColor="#3B82F6"
+                />
+            }
+        >
             <View className="flex-1">
                 {/* Header */}
                 <View className="px-6 pt-12 pb-4">
@@ -232,19 +263,45 @@ export default function RecommendedScreen() {
                             <Ionicons name="arrow-back" size={24} color="white" />
                         </TouchableOpacity>
                         <ThemedText weight="bold" className="text-lg text-white">
-                            Recommended Medicines
+                            Medicines List
                         </ThemedText>
                         <View className="w-6" />
                     </View>
                 </View>
 
-                {/* Filter Card */}
+                {/* Filters */}
                 <View className="px-6 mb-4">
-                    <View className="p-4 bg-white rounded-2xl shadow-lg">
-                        <ThemedText weight="bold" className="mb-3 text-gray-800">
-                            Filter by Type
+                    <View className="flex-row justify-between items-center mb-3">
+                        <ThemedText weight="bold" className="text-black">
+                            Filters
                         </ThemedText>
-                        <View className="flex-row space-x-4">
+                        <TouchableOpacity onPress={() => {
+                            Alert.alert(
+                                "Filter Tips",
+                                "You can mix filters:\n• Recommended + OTC\n• Recommended + Prescription\n\nTap Recommended to toggle it on/off, then select your medicine type.",
+                                [{ text: "Got it", style: "default" }]
+                            );
+                        }}>
+                            <Ionicons name="information-circle-outline" size={20} color="white" />
+                        </TouchableOpacity>
+                    </View>
+                    <View className="flex-row gap-2 space-x-4">
+                            <TouchableOpacity 
+                                className={`flex-row items-center px-4 py-2 rounded-lg border-2 ${
+                                    isRecommended ? 'bg-blue-50 border-blue-500' : 'bg-gray-50 border-gray-200'
+                                }`}
+                                onPress={() => setIsRecommended(isRecommended === true ? undefined : true)}
+                            >
+                                <ThemedText 
+                                    weight="medium" 
+                                    className={`text-sm ${
+                                        isRecommended ? 'text-blue-700' : 'text-gray-600'
+                                    }`}
+                                >
+                                    Recommended
+                                </ThemedText>
+                            </TouchableOpacity>
+
                             {/* OTC Option */}
                             <TouchableOpacity 
                                 className={`flex-1 flex-row items-center justify-center px-4 py-2 rounded-lg border-2 ${
@@ -254,15 +311,6 @@ export default function RecommendedScreen() {
                                 }`}
                                 onPress={() => handleTypeChange('otc')}
                             >
-                                <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
-                                    selectedType === 'otc' 
-                                        ? 'border-green-500 bg-green-500' 
-                                        : 'border-gray-400'
-                                }`}>
-                                    {selectedType === 'otc' && (
-                                        <View className="w-2 h-2 rounded-full bg-white m-0.5" />
-                                    )}
-                                </View>
                                 <ThemedText 
                                     weight="medium" 
                                     className={`text-sm ${
@@ -282,15 +330,6 @@ export default function RecommendedScreen() {
                                 }`}
                                 onPress={() => handleTypeChange('prescription')}
                             >
-                                <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
-                                    selectedType === 'prescription' 
-                                        ? 'border-purple-500 bg-purple-500' 
-                                        : 'border-gray-400'
-                                }`}>
-                                    {selectedType === 'prescription' && (
-                                        <View className="w-2 h-2 rounded-full bg-white m-0.5" />
-                                    )}
-                                </View>
                                 <ThemedText 
                                     weight="medium" 
                                     className={`text-sm ${
@@ -300,13 +339,12 @@ export default function RecommendedScreen() {
                                     Prescription
                                 </ThemedText>
                             </TouchableOpacity>
-                        </View>
                     </View>
                 </View>
 
                 <FlatList
                     className="flex-1 px-6"
-                    data={recommendedMedicines}
+                    data={medicines}
                     keyExtractor={(item) => item.id.toString()}
                     renderItem={renderMedicineItem}
                     ListEmptyComponent={renderEmpty}

@@ -3,7 +3,7 @@ import { useContextProvider } from '@/context/ctx';
 import { checkRequestLimit, RequestLimitInfo } from '@/queries/medicine/requestLimits';
 
 export const useUserPermissions = () => {
-    const { user, isApprovedUser, isPendingUser, isRejectedUser, canMakeRequests, canAddToCart } = useContextProvider();
+    const { user, isApprovedUser, isPendingUser, isRejectedUser, canMakeRequests, canAddToCart, refreshUserData } = useContextProvider();
     const [requestLimitInfo, setRequestLimitInfo] = useState<RequestLimitInfo | null>(null);
     const [isLoadingLimits, setIsLoadingLimits] = useState(false);
 
@@ -32,7 +32,8 @@ export const useUserPermissions = () => {
     // Check if user can make requests (considering monthly limit)
     const canMakeRequestThisMonth = useCallback(() => {
         if (!isApprovedUser()) return false;
-        return requestLimitInfo?.canMakeRequest ?? false;
+        if (!requestLimitInfo) return true;
+        return requestLimitInfo.canMakeRequest;
     }, [isApprovedUser, requestLimitInfo]);
 
     // Check if user can add items to cart
@@ -130,5 +131,6 @@ export const useUserPermissions = () => {
         
         // User data
         user,
+        refreshUserData,
     };
 };

@@ -21,7 +21,8 @@ export interface RecommendedParams {
   page?: number;
   limit?: number;
   inStock?: boolean;
-  type?: 'OTC' | 'PRESCRIPTION';
+  type?: 'OTC' | 'PRESCRIPTION' | 'ALL';
+  isRecommended?: boolean;
 }
 
 // Recommended filters

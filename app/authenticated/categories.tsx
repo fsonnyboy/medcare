@@ -11,7 +11,7 @@ import { MedicineWithCategories, CategoryStatistics, MedicineByCategoryResponse 
 type MedicineType = 'all' | 'otc' | 'prescription';
 
 export default function CategoriesScreen() {
-    const { axiosInstance } = useContextProvider();
+    const { axiosInstance, refreshUserData } = useContextProvider();
     const { categoryName, categoryId } = useLocalSearchParams<{ categoryName: string; categoryId: string }>();
     const [medicines, setMedicines] = useState<MedicineWithCategories[]>([]);
     const [statistics, setStatistics] = useState<CategoryStatistics | null>(null);
@@ -94,9 +94,16 @@ export default function CategoriesScreen() {
         setHasNextPage(true);
     };
 
-    const onRefresh = () => {
+    const onRefresh = async () => {
         setRefreshing(true);
-        fetchMedicines(1, false, true);
+        try {
+            await refreshUserData();
+            await fetchMedicines(1, false, true);
+        } catch (error) {
+            console.error('Error refreshing categories:', error);
+        } finally {
+            setRefreshing(false);
+        }
     };
 
     const getMedicineTypeColor = (type: string) => {

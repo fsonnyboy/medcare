@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, Alert, Text, ActivityIndicator } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, Alert, Text, ActivityIndicator, RefreshControl } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,7 +35,7 @@ const getFullName = (user: any): string => {
 
 export default function RequestMedicine() {
     const params = useLocalSearchParams();
-    const { axiosInstance, session } = useContextProvider();
+    const { axiosInstance, session, refreshUserData } = useContextProvider();
     const { canRequestMedicine, hasReachedRequestLimits, remainingRequests, currentRequestCount, maxAllowedRequests, isLoadingLimits } = useUserPermissions();
     const [quantity, setQuantity] = useState(1);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
@@ -45,6 +45,7 @@ export default function RequestMedicine() {
     const [userData, setUserData] = useState<any>(null);
     const [userDataError, setUserDataError] = useState<string | null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [refreshing, setRefreshing] = useState(false);
     const [formData, setFormData] = useState({
         fullName: '',
         age: '',
@@ -223,6 +224,22 @@ export default function RequestMedicine() {
         Alert.alert('Draft Saved', 'Your request has been saved as a draft.');
     };
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await refreshUserData();
+            // Re-fetch both medicine and user data
+            await Promise.all([
+                fetchMedicineData(),
+                fetchUserData()
+            ]);
+        } catch (error) {
+            console.error('Error refreshing request medicine:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     const getTotalEstimate = () => {
         // For now, we'll use a default price since the API doesn't return price
         const defaultPrice = 0.25; // This should come from the API in the future
@@ -280,7 +297,17 @@ export default function RequestMedicine() {
     }
 
     return (
-        <ViewLayout scrollEnabled={false}>
+        <ViewLayout 
+            scrollEnabled={true}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#3B82F6']}
+                    tintColor="#3B82F6"
+                />
+            }
+        >
             <View className="flex-1">
                 {/* Header */}
                 <View className="px-6 pt-12 pb-4">
@@ -542,7 +569,7 @@ export default function RequestMedicine() {
                                 </View>
                             </View>
 
-                         </View>
+                        </View>
 
                          {/* Important Notice */}
                         <View className="p-4 mt-4 bg-yellow-100 rounded-lg">

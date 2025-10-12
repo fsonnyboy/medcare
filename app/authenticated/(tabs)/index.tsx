@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, FlatList, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, FlatList, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 import { useContextProvider } from '@/context/ctx';
-import { getRecommendedMedicines } from '@/queries/medicine/recommended';
+import { getMedicines } from '@/queries/medicine/recommended';
 import { getMedicineCategories } from '@/queries/medicine/categories';
 import { MedicineExtended } from '@/types/common';
 import { MedicineCategory, RecommendedParams } from '@/types/medicine-queries';
@@ -15,20 +15,23 @@ import { userData } from '@/utils/atom';
 type MedicineType = 'OTC' | 'PRESCRIPTION';
 
 export default function Authenticated() {
-    const { axiosInstance } = useContextProvider();
+    const { axiosInstance, refreshUserData } = useContextProvider();
     const user = useRecoilValue(userData);
-    const [recommendedMedicines, setRecommendedMedicines] = useState<MedicineExtended[]>([]);
+    const [medicines, setMedicines] = useState<MedicineExtended[]>([]);
     const [medicineCategories, setMedicineCategories] = useState<MedicineCategory[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [categoriesLoading, setCategoriesLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [categoriesError, setCategoriesError] = useState<string | null>(null);
     const [selectedMedicineType, setSelectedMedicineType] = useState<MedicineType>('OTC');
+    const [refreshing, setRefreshing] = useState(false);
 
+    useEffect(() => {
+        fetchMedicineCategories();
+    }, []);
     
     useEffect(() => {
-        fetchRecommendedMedicines();
-        fetchMedicineCategories();
+        fetchMedicines();
     }, [selectedMedicineType]);
 
     const fetchMedicineCategories = async () => {
@@ -51,7 +54,7 @@ export default function Authenticated() {
         }
     };
 
-    const fetchRecommendedMedicines = async () => {
+    const fetchMedicines = async () => {
         if (!axiosInstance) {
             setError('No authentication available');
             setIsLoading(false);
@@ -68,11 +71,11 @@ export default function Authenticated() {
                 type: selectedMedicineType
             };
             
-            const response = await getRecommendedMedicines(axiosInstance, params);
-            setRecommendedMedicines(response.medicines);
+            const response = await getMedicines(axiosInstance, params);
+            setMedicines(response.medicines);
         } catch (err) {
-            console.error('Error fetching recommended medicines:', err);
-            setError('Failed to load recommended medicines');
+            console.error('Error fetching medicines:', err);
+            setError('Failed to load medicines');
         } finally {
             setIsLoading(false);
         }
@@ -210,7 +213,7 @@ export default function Authenticated() {
                 <View className="items-center py-8">
                     <ActivityIndicator size="large" color="#f8f8ff" />
                     <ThemedText weight="regular" className="mt-2 text-[#f8f8ff]">
-                        Loading recommended medicines...
+                        Loading medicines...
                     </ThemedText>
                 </View>
             );
@@ -225,7 +228,7 @@ export default function Authenticated() {
                     </ThemedText>
                     <TouchableOpacity 
                         className="px-4 py-2 mt-4 bg-blue-600 rounded-lg"
-                        onPress={fetchRecommendedMedicines}
+                        onPress={fetchMedicines}
                     >
                         <ThemedText weight="medium" className="text-white">
                             Retry
@@ -235,18 +238,18 @@ export default function Authenticated() {
             );
         }
 
-        if (recommendedMedicines.length === 0) {
+        if (medicines.length === 0) {
             return (
                 <View className="items-center py-8">
                     <Ionicons name="medical-outline" size={48} color="#9CA3AF" />
                     <ThemedText weight="medium" className="mt-2 text-gray-500">
-                        No recommended medicines available
+                        No medicines available
                     </ThemedText>
                 </View>
             );
         }
 
-        return recommendedMedicines.slice(0, 5).map((medicine) => (
+        return medicines.slice(0, 5).map((medicine) => (
             <View key={medicine.id}>
                 {renderMedicineItem({ item: medicine })}
             </View>
@@ -310,21 +313,42 @@ export default function Authenticated() {
         );
     };
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await refreshUserData();
+            await Promise.all([
+                fetchMedicineCategories(),
+                fetchMedicines()
+            ]);
+        } catch (error) {
+            console.error('Error refreshing:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     return (
-        <ViewLayout scrollEnabled={false}>
+        <ViewLayout 
+            scrollEnabled={true}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#3B82F6']}
+                    tintColor="#3B82F6"
+                />
+            }
+        >
             <View className="flex-1">
                 {/* Header */}
                 <View className="px-6 pt-12 pb-4">
                     <View className="flex-row justify-between items-center">
-                        <TouchableOpacity>
-                            <Ionicons name="menu" size={24} color="white" />
-                        </TouchableOpacity>
+                        <View/>
                         <ThemedText weight="bold" className="text-lg text-white">
-                            MedCare
+                            Caremeds
                         </ThemedText>
-                        <TouchableOpacity>
-                            {/* <Ionicons name="cart-outline" size={24} color="white" /> */}
-                        </TouchableOpacity>
+                        <View/>
                     </View>
                 </View>
 
@@ -342,29 +366,6 @@ export default function Authenticated() {
                         </TouchableOpacity>
                     </View>
 
-                    {/* Delivery Address Card */}
-                    {/* <View className="p-4 mb-6 bg-white rounded-xl shadow-sm">
-                        <View className="flex-row justify-between items-center">
-                            <View className="flex-row flex-1 items-center">
-                                <Ionicons name="location" size={20} color="#3B82F6" />
-                                <View className="flex-1 ml-3">
-                                    <ThemedText weight="bold" className="mb-1 text-gray-800">
-                                        Delivery Address
-                                    </ThemedText>
-                                    <ThemedText weight="regular" className="text-gray-600">
-                                        123 Main Street,
-                                    </ThemedText>
-                                    <ThemedText weight="regular" className="text-gray-600">
-                                        Downtown
-                                    </ThemedText>
-                                </View>
-                            </View>
-                            <TouchableOpacity>
-                                <Ionicons name="create-outline" size={20} color="#3B82F6" />
-                            </TouchableOpacity>
-                        </View>
-                    </View> */}
-
                     {/* Medicine Categories */}
                     <View className="mb-6">
                         <ThemedText weight="bold" className="mb-4 text-lg text-gray-800">
@@ -373,11 +374,54 @@ export default function Authenticated() {
                         {renderCategoriesSection()}
                     </View>
 
+                    {/* Medicine Type Filter */}
+                    <View className="mb-4">
+                        <View className="flex-row gap-2 space-x-4">
+                            {/* OTC Option */}
+                            <TouchableOpacity 
+                                className={`flex-1 flex-row items-center justify-center px-4 py-2 rounded-lg border-2 ${
+                                    selectedMedicineType === 'OTC' 
+                                        ? 'border-green-500 bg-green-50' 
+                                        : 'border-gray-200 bg-gray-50'
+                                }`}
+                                onPress={() => setSelectedMedicineType('OTC')}
+                            >
+                                <ThemedText 
+                                    weight="medium" 
+                                    className={`text-sm ${
+                                        selectedMedicineType === 'OTC' ? 'text-green-700' : 'text-gray-600'
+                                    }`}
+                                >
+                                    OTC
+                                </ThemedText>
+                            </TouchableOpacity>
+
+                            {/* Prescription Option */}
+                            <TouchableOpacity 
+                                className={`flex-1 flex-row items-center justify-center px-4 py-2 rounded-lg border-2 ${
+                                    selectedMedicineType === 'PRESCRIPTION' 
+                                        ? 'border-purple-500 bg-purple-50' 
+                                        : 'border-gray-200 bg-gray-50'
+                                }`}
+                                onPress={() => setSelectedMedicineType('PRESCRIPTION')}
+                            >
+                                <ThemedText 
+                                    weight="medium" 
+                                    className={`text-sm ${
+                                        selectedMedicineType === 'PRESCRIPTION' ? 'text-purple-700' : 'text-gray-600'
+                                    }`}
+                                >
+                                    Prescription
+                                </ThemedText>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+
                     {/* Popular Medicines */}
                     <View className="mb-6">
                         <View className="flex-row justify-between items-center mb-4">
                             <ThemedText weight="bold" className="text-lg text-gray-800">
-                                Recommended Medicines
+                                All Medicines
                             </ThemedText>
                             <TouchableOpacity 
                                 className="flex-row items-center"
@@ -387,71 +431,6 @@ export default function Authenticated() {
                                     View All
                                 </ThemedText>
                                 <Ionicons name="chevron-forward" size={16} color="white" />
-                            </TouchableOpacity>
-                        </View>
-                        
-                        {/* Medicine Type Filter */}
-                        <View className="flex-row p-2 mb-4 bg-white rounded-xl">
-                            <TouchableOpacity
-                                className={`flex-1 py-2 px-4 rounded-lg mr-2 ${
-                                    selectedMedicineType === 'OTC' 
-                                        ? 'bg-blue-500' 
-                                        : 'bg-gray-100'
-                                }`}
-                                onPress={() => setSelectedMedicineType('OTC')}
-                            >
-                                <View className="flex-row justify-center items-center">
-                                    <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
-                                        selectedMedicineType === 'OTC'
-                                            ? 'bg-white border-white'
-                                            : 'border-gray-400'
-                                    }`}>
-                                        {selectedMedicineType === 'OTC' && (
-                                            <View className="w-2 h-2 bg-blue-500 rounded-full self-center mt-0.5" />
-                                        )}
-                                    </View>
-                                    <ThemedText 
-                                        weight="medium" 
-                                        className={`text-center ${
-                                            selectedMedicineType === 'OTC' 
-                                                ? 'text-white' 
-                                                : 'text-gray-700'
-                                        }`}
-                                    >
-                                        OTC
-                                    </ThemedText>
-                                </View>
-                            </TouchableOpacity>
-                            
-                            <TouchableOpacity
-                                className={`flex-1 py-2 px-4 rounded-lg ${
-                                    selectedMedicineType === 'PRESCRIPTION' 
-                                        ? 'bg-blue-500' 
-                                        : 'bg-gray-100'
-                                }`}
-                                onPress={() => setSelectedMedicineType('PRESCRIPTION')}
-                            >
-                                <View className="flex-row justify-center items-center">
-                                    <View className={`w-4 h-4 rounded-full border-2 mr-2 ${
-                                        selectedMedicineType === 'PRESCRIPTION'
-                                            ? 'bg-white border-white'
-                                            : 'border-gray-400'
-                                    }`}>
-                                        {selectedMedicineType === 'PRESCRIPTION' && (
-                                            <View className="w-2 h-2 bg-blue-500 rounded-full self-center mt-0.5" />
-                                        )}
-                                    </View>
-                                    <ThemedText 
-                                        weight="medium" 
-                                        className={`text-center ${
-                                            selectedMedicineType === 'PRESCRIPTION' 
-                                                ? 'text-white' 
-                                                : 'text-gray-700'
-                                        }`}
-                                    >
-                                        Prescription
-                                    </ThemedText>
-                                </View>
                             </TouchableOpacity>
                         </View>
                         

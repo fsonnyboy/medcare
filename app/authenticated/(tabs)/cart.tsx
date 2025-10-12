@@ -14,7 +14,7 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { PermissionGate } from '@/components/PermissionGate';
 
 export default function CartScreen() {
-  const { axiosInstance, session } = useContextProvider();
+  const { axiosInstance, session, refreshUserData } = useContextProvider();
   const { canRequestMedicine, isPendingUser } = useUserPermissions();
   const [cartItems, setCartItems] = useState<CartItemWithAvailability[]>([]);
   const [cartSummary, setCartSummary] = useState<CartSummary | null>(null);
@@ -76,9 +76,16 @@ export default function CartScreen() {
     }
   };
 
-  const onRefresh = () => {
+  const onRefresh = async () => {
     setRefreshing(true);
-    fetchCartItems(1, false, true);
+    try {
+      await refreshUserData();
+      await fetchCartItems(1, false, true);
+    } catch (error) {
+      console.error('Error refreshing cart:', error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   const handleClearCart = async () => {
@@ -406,7 +413,7 @@ export default function CartScreen() {
       return (
         <View className="flex justify-center items-center py-8 h-full">
           <Ionicons name="alert-circle-outline" size={48} color="#EF4444" />
-          <ThemedText weight="medium" className="mt-2 text-red-500">
+          <ThemedText weight="medium" className="mt-2 text-[#EF4444]">
             {error}
           </ThemedText>
           <TouchableOpacity 
@@ -429,7 +436,7 @@ export default function CartScreen() {
           <View className="flex-row justify-between items-center">
             <View className='w-5 h-5'/>
             <ThemedText weight="bold" className="text-lg text-white">
-              Shopping Cart
+              Cart Medicine
             </ThemedText>
             <View className="flex-row items-center space-x-3">
               {cartItems.length > 0 && (
@@ -437,9 +444,13 @@ export default function CartScreen() {
                   <Ionicons name="trash-outline" size={20} color="white" />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity onPress={() => router.push('/authenticated')}>
-                <Ionicons name="add" size={24} color="white" />
-              </TouchableOpacity>
+              {
+                canRequestMedicine() && (
+                  <TouchableOpacity onPress={() => router.push('/authenticated')}>
+                    <Ionicons name="add" size={24} color="white" />
+                  </TouchableOpacity>
+                )
+              }
             </View>
           </View>
         </View>

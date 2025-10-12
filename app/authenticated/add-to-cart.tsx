@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, RefreshControl } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -12,13 +12,14 @@ import { PermissionGate } from '@/components/PermissionGate';
 
 export default function AddToCart() {
     const params = useLocalSearchParams();
-    const { axiosInstance, session } = useContextProvider();
+    const { axiosInstance, session, refreshUserData } = useContextProvider();
     const { canAddToCart, isApprovedUser, isPendingUser } = useUserPermissions();
     const [medicine, setMedicine] = useState<MedicineByIdResponse['medicine'] | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isAddingToCart, setIsAddingToCart] = useState(false);
     const [quantity, setQuantity] = useState(1);
+    const [refreshing, setRefreshing] = useState(false);
 
     const medicineId = params.id ? parseInt(params.id as string) : null;
 
@@ -133,6 +134,22 @@ export default function AddToCart() {
         });
     };
 
+    const onRefresh = async () => {
+        setRefreshing(true);
+        try {
+            await refreshUserData();
+            // Re-fetch medicine data
+            if (medicineId && axiosInstance) {
+                const response = await getMedicineById(axiosInstance, medicineId);
+                setMedicine(response.medicine);
+            }
+        } catch (error) {
+            console.error('Error refreshing add-to-cart:', error);
+        } finally {
+            setRefreshing(false);
+        }
+    };
+
     if (loading) {
         return (
             <ViewLayout scrollEnabled={false}>
@@ -171,7 +188,17 @@ export default function AddToCart() {
     }
 
     return (
-        <ViewLayout scrollEnabled={false}>
+        <ViewLayout 
+            scrollEnabled={true}
+            refreshControl={
+                <RefreshControl
+                    refreshing={refreshing}
+                    onRefresh={onRefresh}
+                    colors={['#3B82F6']}
+                    tintColor="#3B82F6"
+                />
+            }
+        >
             <View className="flex-1">
                 {/* Header */}
                 <View className="px-6 pt-12 pb-4">

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image } from 'react-native';
+import { View, ScrollView, TouchableOpacity, Alert, ActivityIndicator, Image, RefreshControl } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,11 +11,12 @@ import { getUserData } from '@/queries/profile/user-data';
 import { router } from 'expo-router';
 
 export default function Profile() {
-    const { logout, axiosInstance, session } = useContextProvider();
+    const { logout, axiosInstance, session, refreshUserData } = useContextProvider();
     const storedUserData = useRecoilValue(userDataAtom);
     const [userData, setUserData] = useState<UserDataResponse | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     const fetchUserData = async () => {
         if (!axiosInstance || !session?.userId) {
@@ -42,6 +43,18 @@ export default function Profile() {
     useEffect(() => {
         fetchUserData();
     }, [axiosInstance, session?.userId]);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            await refreshUserData();
+            await fetchUserData();
+        } catch (error) {
+            console.error('Error refreshing profile:', error);
+        } finally {
+            setIsRefreshing(false);
+        }
+    };
 
     const handleLogout = () => {
         Alert.alert(
@@ -94,7 +107,7 @@ export default function Profile() {
         }
 
         const profile = userData?.profile || storedUserData;
-        const fullName = `${profile.name + ' '} ${profile.middleName?.charAt(0) + '. ' || ''} ${profile.lastName}`.trim();
+        const fullName = `${profile.name + ' '} ${profile.middleName ? profile.middleName?.charAt(0) + '. ' : ''} ${profile.lastName ? profile.lastName : ''}`.trim();
 
         return (
             <View className="bg-[#E7F3FE] rounded-xl p-6 mt-6 mb-6 shadow-sm">
@@ -112,17 +125,53 @@ export default function Profile() {
                     <ThemedText weight="bold" className="mb-1 text-xl text-gray-800">
                         {fullName || 'User Name'}
                     </ThemedText>
-                    <ThemedText weight="regular" className="mb-4 text-gray-600">
+                    <ThemedText weight="regular" className="mb-2 text-gray-600">
                         {profile.username || 'username@example.com'}
                     </ThemedText>
-                    <TouchableOpacity 
-                        className="px-4 py-2 bg-blue-100 rounded-xl"
-                        onPress={() => router.push('/authenticated/update-profile')}
-                    >
-                        <ThemedText weight="medium" className="text-blue-600">
-                            Edit Profile
+                    
+                    {/* Status Badge */}
+                    <View className={`px-3 py-1 mb-4 rounded-full ${
+                        profile.status === 'APPROVED' ? 'bg-green-100' :
+                        profile.status === 'PENDING' ? 'bg-yellow-100' :
+                        'bg-red-100'
+                    }`}>
+                        <ThemedText weight="medium" className={`text-sm ${
+                            profile.status === 'APPROVED' ? 'text-green-700' :
+                            profile.status === 'PENDING' ? 'text-yellow-700' :
+                            'text-red-700'
+                        }`}>
+                            {profile.status === 'APPROVED' ? '✓ Approved' :
+                             profile.status === 'PENDING' ? '⏳ Pending Approval' :
+                             '✗ Rejected'}
                         </ThemedText>
-                    </TouchableOpacity>
+                    </View>
+                    <View className="flex-row space-x-3">
+                        <TouchableOpacity 
+                            className="px-4 py-2 bg-blue-100 rounded-xl"
+                            onPress={() => router.push('/authenticated/update-profile')}
+                        >
+                            <ThemedText weight="medium" className="text-blue-600">
+                                Edit Profile
+                            </ThemedText>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            className="px-4 py-2 bg-green-100 rounded-xl"
+                            onPress={handleRefresh}
+                            disabled={isRefreshing}
+                        >
+                            <View className="flex-row items-center">
+                                <Ionicons 
+                                    name="refresh" 
+                                    size={16} 
+                                    color="#10B981" 
+                                    style={{ transform: [{ rotate: isRefreshing ? '180deg' : '0deg' }] }}
+                                />
+                                <ThemedText weight="medium" className="ml-1 text-green-600">
+                                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                                </ThemedText>
+                            </View>
+                        </TouchableOpacity>
+                    </View>
                 </View>
             </View>
         );
@@ -294,20 +343,26 @@ export default function Profile() {
     };
 
     return (
-        <ViewLayout scrollEnabled={false}>
+        <ViewLayout 
+            scrollEnabled={true}
+            refreshControl={
+                <RefreshControl
+                    refreshing={isRefreshing}
+                    onRefresh={handleRefresh}
+                    colors={['#3B82F6']}
+                    tintColor="#3B82F6"
+                />
+            }
+        >
             <View className="flex-1">
                 {/* Header */}
                 <View className="px-6 pt-12 pb-4">
                     <View className="flex-row justify-between items-center">
-                        <TouchableOpacity>
-                            <Ionicons name="menu" size={24} color="white" />
-                        </TouchableOpacity>
+                        <View/>
                         <ThemedText weight="bold" className="text-lg text-white">
                             Profile
                         </ThemedText>
-                        <TouchableOpacity>
-                            {/* <Ionicons name="settings-outline" size={24} color="white" /> */}
-                        </TouchableOpacity>
+                        <View/>
                     </View>
                 </View>
 

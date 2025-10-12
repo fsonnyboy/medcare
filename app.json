@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "medicare",
-    "slug": "medicare",
+    "name": "Caremeds",
+    "slug": "caremeds",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,7 +13,7 @@
     },
     "assetBundlePatterns": [
       "**/*"
-    ],
+    ],  
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
@@ -33,15 +33,14 @@
         }
       ]
     ],
-    "scheme": "medicare",
+    "scheme": "caremeds",
     "extra": {
       "router": {
         "origin": false
       },
       "eas": {
-        "projectId": "605bc7a2-2520-4d4b-a540-1fb1963905fd"
+        "projectId": "5846c193-c7bd-4d46-839c-79d0c0e10b85"
       }
-    },
-    "owner": "tibotxamber"
+    }
   }
 }

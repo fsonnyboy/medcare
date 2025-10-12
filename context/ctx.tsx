@@ -49,6 +49,8 @@ interface AuthContextProps {
     isRejectedUser: () => boolean;
     canMakeRequests: () => boolean;
     canAddToCart: () => boolean;
+    // User data refresh function
+    refreshUserData: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextProps>({
@@ -65,6 +67,7 @@ const AuthContext = createContext<AuthContextProps>({
     isRejectedUser: () => false,
     canMakeRequests: () => false,
     canAddToCart: () => false,
+    refreshUserData: () => Promise.resolve(),
 });
 
 export function useContextProvider(): AuthContextProps {
@@ -132,6 +135,37 @@ export const ContextProvider: React.FC<React.PropsWithChildren> = (props) => {
         // Only approved users can add to cart
         return isApprovedUser();
     }, [isApprovedUser]);
+
+    // Function to refresh user data from server
+    const refreshUserData = useCallback(async () => {
+        if (!axiosInstance || !session?.userId || !user) return;
+        
+        try {
+            // Import getUserData here to avoid circular dependency
+            const { getUserData } = require('@/queries/profile/user-data');
+            const data = await getUserData(axiosInstance, { 
+                userId: parseInt(session.userId) 
+            });
+            
+            // Update user data in all storage locations
+            const updatedUser: AuthUser = {
+                ...user,
+                status: data.profile.status as 'PENDING' | 'APPROVED' | 'REJECTED',
+                // Update other fields that might have changed
+                name: data.profile.name,
+                contactNumber: data.profile.contactNumber || user.contactNumber,
+                address: data.profile.address || user.address,
+            };
+            
+            await AsyncStorage.setItem('user', JSON.stringify(updatedUser));
+            setUser(updatedUser);
+            setUserState(updatedUser);
+            
+            console.log('User data refreshed successfully');
+        } catch (error) {
+            console.error('Error refreshing user data:', error);
+        }
+    }, [axiosInstance, session?.userId, user, setUserState]);
 
     useEffect(() => {
         const validateSession = async () => {
@@ -337,6 +371,7 @@ export const ContextProvider: React.FC<React.PropsWithChildren> = (props) => {
                 isRejectedUser,
                 canMakeRequests,
                 canAddToCart,
+                refreshUserData,
             }}>
             {props.children}
         </AuthContext.Provider>
