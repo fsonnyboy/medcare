@@ -74,6 +74,20 @@ export default function AuthenticatedLayout() {
           headerShown: false 
         }} 
       />
+      <Stack.Screen 
+        name="concern-feedback" 
+        options={{ 
+          title: 'Report Concern',
+          headerShown: false 
+        }} 
+      />
+      <Stack.Screen 
+        name="concerns-list" 
+        options={{ 
+          title: 'My Concerns',
+          headerShown: false 
+        }} 
+      />
     </Stack>
   );
 } 

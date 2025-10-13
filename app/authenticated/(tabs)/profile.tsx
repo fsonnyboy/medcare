@@ -145,29 +145,28 @@ export default function Profile() {
                              '✗ Rejected'}
                         </ThemedText>
                     </View>
-                    <View className="flex-row space-x-3">
+                    
+                    {/* Support Buttons */}
+                    <View className="flex-row gap-2 mt-3 space-x-3">
                         <TouchableOpacity 
-                            className="px-4 py-2 bg-blue-100 rounded-xl"
-                            onPress={() => router.push('/authenticated/update-profile')}
+                            className="flex-1 px-4 py-2 bg-purple-100 rounded-xl"
+                            onPress={() => router.push('/authenticated/concern-feedback')}
                         >
-                            <ThemedText weight="medium" className="text-blue-600">
-                                Edit Profile
-                            </ThemedText>
+                            <View className="flex-row justify-center items-center">
+                                <Ionicons name="chatbubble-outline" size={16} color="#8B5CF6" />
+                                <ThemedText weight="medium" className="ml-1 text-purple-600">
+                                    Report Concern
+                                </ThemedText>
+                            </View>
                         </TouchableOpacity>
                         <TouchableOpacity 
-                            className="px-4 py-2 bg-green-100 rounded-xl"
-                            onPress={handleRefresh}
-                            disabled={isRefreshing}
+                            className="flex-1 px-4 py-2 bg-indigo-100 rounded-xl"
+                            onPress={() => router.push('/authenticated/concerns-list')}
                         >
-                            <View className="flex-row items-center">
-                                <Ionicons 
-                                    name="refresh" 
-                                    size={16} 
-                                    color="#10B981" 
-                                    style={{ transform: [{ rotate: isRefreshing ? '180deg' : '0deg' }] }}
-                                />
-                                <ThemedText weight="medium" className="ml-1 text-green-600">
-                                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                            <View className="flex-row justify-center items-center">
+                                <Ionicons name="list-outline" size={16} color="#6366F1" />
+                                <ThemedText weight="medium" className="ml-1 text-indigo-600">
+                                    View Concerns
                                 </ThemedText>
                             </View>
                         </TouchableOpacity>
@@ -282,22 +281,6 @@ export default function Profile() {
                                 {profile.address || 'N/A'}
                             </ThemedText>
                         </View>
-
-                    {/* Account Status */}
-                    <View className="flex-row justify-between items-center p-3 bg-white rounded-lg">
-                        <View className="flex-row items-center">
-                            <Ionicons name="shield-checkmark-outline" size={20} color="#10B981" />
-                            <ThemedText weight="medium" className="ml-3 text-gray-700">
-                                Account Status
-                            </ThemedText>
-                        </View>
-                        <View className="flex-row items-center">
-                            <View className={`w-2 h-2 rounded-full mr-2 ${profile.status === 'Active' ? 'bg-green-500' : 'bg-red-500'}`} />
-                            <ThemedText weight="medium" className={`${profile.status === 'Active' ? 'text-green-600' : 'text-red-600'}`}>
-                                {profile.status || 'Active'}
-                            </ThemedText>
-                        </View>
-                    </View>
 
                     {/* Registration Date */}
                     <View className="flex-row justify-between items-center p-3 bg-white rounded-lg">

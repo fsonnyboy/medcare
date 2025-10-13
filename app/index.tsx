@@ -51,10 +51,6 @@ export default function Index() {
         }
     };
 
-    const handleFacebookSignIn = () => {
-        Alert.alert('Info', 'Facebook sign-in functionality would be implemented here');
-    };
-
     const handleForgotPassword = () => {
         Alert.alert('Info', 'Forgot password functionality would be implemented here');
     };
@@ -208,26 +204,15 @@ export default function Index() {
                         </View>
 
                         {/* Social Login Buttons */}
-                        <View className="flex-row gap-2 mb-6 space-x-4">
+                        <View className="mb-6">
                             <TouchableOpacity
-                                className="flex-row flex-1 justify-center items-center py-3 bg-white rounded-xl border border-gray-200"
+                                className="flex-row justify-center items-center py-3 bg-white rounded-xl border border-gray-200"
                                 onPress={handleGoogleSignIn}
                                 disabled={isLoading}
                             >
                                 <Text className="mr-2 text-lg font-bold text-red-500">G</Text>
                                 <ThemedText weight="medium" className="text-gray-700">
                                     Google
-                                </ThemedText>
-                            </TouchableOpacity>
-                            
-                            <TouchableOpacity
-                                className="flex-row flex-1 justify-center items-center py-3 bg-white rounded-xl border border-gray-200"
-                                onPress={handleFacebookSignIn}
-                                disabled={isLoading}
-                            >
-                                <Text className="mr-2 text-lg font-bold text-blue-600">f</Text>
-                                <ThemedText weight="medium" className="text-gray-700">
-                                    Facebook
                                 </ThemedText>
                             </TouchableOpacity>
                         </View>
