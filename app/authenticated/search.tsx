@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, StatusBar, ScrollView } from 'react-native';
+import { View, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, StatusBar, Image } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -169,11 +169,15 @@ export default function SearchScreen() {
                 <View className="flex-row items-start">
                     {/* Medicine Icon */}
                     <View className={`w-14 h-14 rounded-xl ${item.recommended ? 'bg-blue-50' : 'bg-gray-50'} items-center justify-center mr-4 border ${item.recommended ? 'border-blue-200' : 'border-gray-200'}`}>
-                        <Ionicons 
+                        {item.image ? (
+                            <Image source={{ uri: item.image }} className="w-14 h-14 rounded-xl" />
+                        ) : (
+                            <Ionicons 
                             name="medical-outline" 
                             size={28} 
                             color={item.recommended ? '#3B82F6' : '#6B7280'} 
-                        />
+                            />
+                        )}
                     </View>
                     
                     {/* Medicine Details */}

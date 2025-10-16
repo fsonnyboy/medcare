@@ -8,6 +8,7 @@ import { useContextProvider } from '@/context/ctx';
 import { getMedicineById, MedicineByIdResponse } from '@/queries/medicine/medicineById';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { PermissionGate } from '@/components/PermissionGate';
+import { Image } from 'react-native';
 
 export default function MedicineDetail() {
     const params = useLocalSearchParams();
@@ -179,13 +180,17 @@ export default function MedicineDetail() {
                     </View>
                 )}
 
-                <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
+                <View className="flex-1 px-6">
                     {/* Product Overview Card */}
                     <View className="p-6 mt-6 mb-4 bg-[#E7F3FE] rounded-xl shadow-sm">
                         <View className="flex-row">
                             {/* Product Icon */}
                             <View className="justify-center items-center mr-4 w-20 h-20 bg-blue-100 rounded-xl">
-                                <Ionicons name="medical-outline" size={40} color="#3B82F6" />
+                                {medicine.image ? (
+                                    <Image source={{ uri: medicine.image }} className="w-20 h-20 rounded-xl" />
+                                ) : (
+                                    <Ionicons name="medical-outline" size={40} color="#3B82F6" />
+                                )}
                             </View>
                             
                             {/* Product Details */}
@@ -279,7 +284,7 @@ export default function MedicineDetail() {
                             </ThemedText>
                         </View>
                     )}
-                </ScrollView>
+                </View>
 
                 {/* Bottom Action Buttons */}
                 <View className="gap-2 px-6 py-4 space-y-3">

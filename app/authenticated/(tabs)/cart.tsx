@@ -12,6 +12,7 @@ import { CartItemWithAvailability, CartSummary, GetCartItemsResponse } from '@/t
 import { CreateMedicineRequestData } from '@/types/medicine-requests';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { PermissionGate } from '@/components/PermissionGate';
+import { Image } from 'react-native';
 
 export default function CartScreen() {
   const { axiosInstance, session, refreshUserData } = useContextProvider();
@@ -330,7 +331,11 @@ export default function CartScreen() {
         </TouchableOpacity>
 
         <View className="justify-center items-center mr-4 w-12 h-12 bg-blue-100 rounded-lg">
-          <Ionicons name="medical-outline" size={24} color="#3B82F6" />
+          {item.medicine.image ? (
+            <Image source={{ uri: item.medicine.image }} className="w-12 h-12 rounded-lg" />
+          ) : (
+            <Ionicons name="medical-outline" size={24} color="#3B82F6" />
+          )}
         </View>
         
         <View className="flex-1">

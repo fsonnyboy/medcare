@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, ScrollView, TouchableOpacity, TextInput, Alert, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -226,7 +226,12 @@ export default function AddToCart() {
                         <View className="flex-row">
                             {/* Product Icon */}
                             <View className="justify-center items-center mr-4 w-16 h-16 bg-blue-100 rounded-xl">
-                                <Ionicons name="medical-outline" size={32} color="#3B82F6" />
+                                
+                                {medicine.image ? (
+                                    <Image source={{ uri: medicine.image }} className="w-16 h-16 rounded-xl" />
+                                ) : (
+                                    <Ionicons name="medical-outline" size={32} color="#3B82F6" />
+                                )}
                             </View>
                             
                             {/* Product Details */}

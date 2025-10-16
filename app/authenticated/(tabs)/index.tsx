@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, ScrollView, FlatList, Alert, ActivityIndicator, RefreshControl } from 'react-native';
+import { View, Text, TouchableOpacity, ScrollView, FlatList, Alert, ActivityIndicator, RefreshControl, Image } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -164,9 +164,17 @@ export default function Authenticated() {
                 onPress={() => router.push(`/authenticated/medicine-detail?id=${item.id}` as any)}
             >
                 <View className="flex-row items-center">
-                    {/* Medicine Icon */}
+                    {/* Medicine Icon/Image */}
                     <View className={`w-12 h-12 rounded-lg ${iconColors.bg} items-center justify-center mr-4`}>
-                        <Ionicons name="medical-outline" size={24} color={iconColors.text.replace('text-', '#')} />
+                        {item.image ? (
+                            <Image 
+                                source={{ uri: item.image }} 
+                                className="w-12 h-12 rounded-lg"
+                                resizeMode="cover"
+                            />
+                        ) : (
+                            <Ionicons name="medical-outline" size={24} color={iconColors.text.replace('text-', '#')} />
+                        )}
                     </View>
                     
                     {/* Medicine Details */}

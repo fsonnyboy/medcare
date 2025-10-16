@@ -8,6 +8,7 @@ import { useContextProvider } from '@/context/ctx';
 import { getMedicines } from '@/queries/medicine/recommended';
 import { MedicineExtended } from '@/types/common';
 import { RecommendedResponse, RecommendedParams } from '@/types/medicine-queries';
+import { Image } from 'react-native';
 
 type MedicineType = 'otc' | 'prescription';
 
@@ -125,7 +126,12 @@ export default function RecommendedScreen() {
                 <View className="flex-row items-center">
                     {/* Medicine Icon */}
                     <View className={`w-12 h-12 rounded-lg ${iconColors.bg} items-center justify-center mr-4`}>
-                        <Ionicons name="medical-outline" size={24} color={iconColors.text.replace('text-', '#')} />
+                        
+                        {item.image ? (
+                            <Image source={{ uri: item.image }} className="w-12 h-12 rounded-lg" />
+                        ) : (
+                            <Ionicons name="medical-outline" size={24} color={iconColors.text.replace('text-', '#')} />
+                        )}
                     </View>
                     
                     {/* Medicine Details */}

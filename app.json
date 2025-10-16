@@ -4,25 +4,25 @@
     "slug": "caremeds",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/caremed.jpg",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/images/splash-icon.png",
+      "image": "./assets/images/caremed-splash.png",
       "resizeMode": "contain",
       "backgroundColor": "#ffffff"
     },
     "assetBundlePatterns": [
       "**/*"
-    ],  
+    ],
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/adaptive-icon.png",
+        "foregroundImage": "./assets/images/caremed.jpg",
         "backgroundColor": "#ffffff"
       },
       "package": "com.medicare.mobile"
     },
     "web": {
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/images/caremed.jpg"
     },
     "plugins": [
       "expo-router",
@@ -33,13 +33,12 @@
         }
       ]
     ],
-    "scheme": "caremeds",
     "extra": {
       "router": {
         "origin": false
       },
       "eas": {
-        "projectId": "5846c193-c7bd-4d46-839c-79d0c0e10b85"
+        "projectId": "4b5d8fd8-4c50-4d0e-9f86-73651cedb8a0"
       }
     }
   }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, TouchableOpacity, ActivityIndicator, RefreshControl, FlatList } from 'react-native';
+import { View, TouchableOpacity, ActivityIndicator, RefreshControl, FlatList, Image } from 'react-native';
 import { ViewLayout } from '@/components/view-layout';
 import ThemedText from '@/components/themed-text';
 import { Ionicons } from '@expo/vector-icons';
@@ -140,7 +140,11 @@ export default function CategoriesScreen() {
                 <View className="flex-row items-center">
                     {/* Medicine Icon */}
                     <View className={`w-12 h-12 rounded-lg ${iconColors.bg} items-center justify-center mr-4`}>
-                        <Ionicons name="medical-outline" size={24} color={iconColors.text.replace('text-', '#')} />
+                        {item.image ? (
+                            <Image source={{ uri: item.image }} className="w-12 h-12 rounded-lg" />
+                        ) : (
+                            <Ionicons name="medical-outline" size={24} color={iconColors.text.replace('text-', '#')} />
+                        )}
                     </View>
                     
                     {/* Medicine Details */}
