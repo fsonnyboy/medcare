@@ -25,6 +25,8 @@ const SignUpSchema = Yup.object().shape({
         .matches(/^[a-zA-Z\s]+$/, 'Name can only contain letters and spaces'),
     DateOfBirth: Yup.string()
         .required('Date of birth is required'),
+    contactNumber: Yup.string()
+        .matches(/^(\+639\d{9}|09\d{9})$/, 'Please enter a valid Philippine mobile number (+639XXXXXXXXX or 09XXXXXXXXX)'),
     password: Yup.string()
         .required('Password is required')
         .min(6, 'Password must be at least 6 characters'),
@@ -138,6 +140,7 @@ export default function SignUp() {
                                 username: '',
                                 name: '',
                                 DateOfBirth: '',
+                                contactNumber: '',
                                 password: '',
                                 confirmPassword: '',
                                 agreeToTerms: false,
@@ -214,6 +217,33 @@ export default function SignUp() {
                                                 maximumDate={new Date()}
                                                 minimumDate={new Date(1900, 0, 1)}
                                             />
+                                        </View>
+
+                                        {/* Contact Number Field */}
+                                        <View>
+                                            <ThemedText weight="medium" className="mb-2 text-gray-700">
+                                                Contact Number
+                                            </ThemedText>
+                                            <View className={`flex-row items-center px-4 py-3 bg-gray-50 rounded-xl border ${
+                                                errors.contactNumber && touched.contactNumber ? 'border-red-500' : 'border-gray-200'
+                                            }`}>
+                                                <Ionicons name="call-outline" size={20} color="#6B7280" />
+                                                <TextInput
+                                                    className="flex-1 ml-3 text-gray-800"
+                                                    placeholder="+639123456789 or 09123456789"
+                                                    placeholderTextColor="#9CA3AF"
+                                                    value={values.contactNumber}
+                                                    onChangeText={handleChange('contactNumber')}
+                                                    onBlur={handleBlur('contactNumber')}
+                                                    keyboardType="phone-pad"
+                                                    autoCapitalize="none"
+                                                />
+                                            </View>
+                                            {errors.contactNumber && touched.contactNumber && (
+                                                <ThemedText weight="regular" className="mt-1 text-sm text-red-500">
+                                                    {errors.contactNumber}
+                                                </ThemedText>
+                                            )}
                                         </View>
 
                                         {/* Password Field */}
