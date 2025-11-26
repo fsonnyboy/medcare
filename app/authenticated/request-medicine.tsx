@@ -37,7 +37,7 @@ export default function RequestMedicine() {
     const params = useLocalSearchParams();
     const { axiosInstance, session, refreshUserData } = useContextProvider();
     const { canRequestMedicine, hasReachedRequestLimits, remainingRequests, currentRequestCount, maxAllowedRequests, isLoadingLimits } = useUserPermissions();
-    const [quantity, setQuantity] = useState(1);
+    // const [quantity, setQuantity] = useState(1);
     const [isLoadingUserData, setIsLoadingUserData] = useState(true);
     const [isLoadingMedicine, setIsLoadingMedicine] = useState(true);
     const [medicine, setMedicine] = useState<MedicineByIdResponse['medicine'] | null>(null);
@@ -120,10 +120,10 @@ export default function RequestMedicine() {
         fetchMedicineData();
     }, [axiosInstance, params.id]);
     
-    const handleQuantityChange = (change: number) => {
-        const newQuantity = Math.max(1, quantity + change);
-        setQuantity(newQuantity);
-    };
+    // const handleQuantityChange = (change: number) => {
+    //     const newQuantity = Math.max(1, quantity + change);
+    //     setQuantity(newQuantity);
+    // };
 
     const handleInputChange = (field: string, value: string) => {
         setFormData(prev => ({
@@ -163,10 +163,10 @@ export default function RequestMedicine() {
             Alert.alert('Error', 'Please provide a reason for your medicine request');
             return false;
         }
-        if (medicine && medicine.stock < quantity) {
-            Alert.alert('Error', `Only ${medicine.stock} units available in stock. Please reduce your quantity.`);
-            return false;
-        }
+        // if (medicine && medicine.stock < quantity) {
+        //     Alert.alert('Error', `Only ${medicine.stock} units available in stock. Please reduce your quantity.`);
+        //     return false;
+        // }
         return true;
     };
 
@@ -183,7 +183,7 @@ export default function RequestMedicine() {
                 medicines: [
                     {
                         medicineId: medicine.id,
-                        quantity: quantity
+                        quantity: 0
                     }
                 ]
             };
@@ -240,11 +240,11 @@ export default function RequestMedicine() {
         }
     };
 
-    const getTotalEstimate = () => {
-        // For now, we'll use a default price since the API doesn't return price
-        const defaultPrice = 0.25; // This should come from the API in the future
-        return (quantity * defaultPrice).toFixed(2);
-    };
+    // const getTotalEstimate = () => {
+    //     // For now, we'll use a default price since the API doesn't return price
+    //     const defaultPrice = 0.25; // This should come from the API in the future
+    //     return (quantity * defaultPrice).toFixed(2);
+    // };
 
     // Show loading state while fetching data
     if (isLoadingMedicine || isLoadingUserData) {
@@ -540,7 +540,7 @@ export default function RequestMedicine() {
                             </View>
                             
                             {/* Quantity */}
-                            <View>
+                            {/* <View>
                                 <ThemedText weight="medium" className="text-gray-700">
                                     Quantity <Text className="text-red-500">*</Text>
                                 </ThemedText>
@@ -567,7 +567,7 @@ export default function RequestMedicine() {
                                         units
                                     </ThemedText>
                                 </View>
-                            </View>
+                            </View> */}
 
                         </View>
 

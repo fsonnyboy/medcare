@@ -305,7 +305,7 @@ export default function CartScreen() {
     }
   };
 
-  const getSelectedItemsCount = () => selectedItems.size;
+  // const getSelectedItemsCount = () => selectedItems.size;
 
   const getSelectedItems = () => {
     return cartItems.filter(item => selectedItems.has(item.id));
@@ -592,11 +592,11 @@ export default function CartScreen() {
                         </ThemedText>
                       </TouchableOpacity>
                       
-                      {selectedItems.size > 0 && (
+                      {/* {selectedItems.size > 0 && (
                         <ThemedText weight="medium" className="text-blue-600">
                           {getSelectedItemsCount()} selected
                         </ThemedText>
-                      )}
+                      )} */}
                     </View>
                   </View>
                 )}
@@ -627,7 +627,7 @@ export default function CartScreen() {
               >
                 <Ionicons name="flash" size={20} color="white" />
                 <ThemedText weight="semibold" className="ml-2 text-lg text-white">
-                  Request Now ({getSelectedItemsCount()} items)
+                  Request Now
                 </ThemedText>
               </TouchableOpacity>
             </PermissionGate>
@@ -648,7 +648,7 @@ export default function CartScreen() {
                   Medicine Request
                 </ThemedText>
                 <ThemedText weight="regular" className="text-sm text-gray-600">
-                  Please provide a reason for requesting {getSelectedItemsCount()} medicine(s)
+                  Please provide a reason for requesting medicine(s)
                 </ThemedText>
               </View>
               
